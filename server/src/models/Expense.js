@@ -54,6 +54,11 @@ const expenseSchema = new mongoose.Schema(
             type: Number,
         },
 
+        ocrAmountMismatch: {
+            type: Boolean,
+            default: false,
+        },
+
         policyFlag: {
             type: Boolean,
             default: false,

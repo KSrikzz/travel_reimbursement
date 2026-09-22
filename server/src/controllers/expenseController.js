@@ -6,6 +6,13 @@ const {
 const {
     uploadToCloudinary,
 } = require("../services/cloudinaryService");
+const {
+    extractTextFromImage,
+} = require("../services/ocrService");
+
+const {
+    extractTotalAmount,
+} = require("../services/receiptParser");
 
 const createExpense = async (req, res) => {
     try {
@@ -75,14 +82,20 @@ const createExpense = async (req, res) => {
             amount
         );
         let receiptUrl;
+        let ocrText;
+        let ocrExtractedAmount;
 
         if (req.file) {
         const uploadResult = await uploadToCloudinary(
             req.file.buffer
         );
             receiptUrl = uploadResult.secure_url;
-        }
+            
+            ocrText = await extractTextFromImage(req.file.buffer);
 
+            ocrExtractedAmount = extractTotalAmount(ocrText);
+        }
+        const ocrAmountMismatch = ocrExtractedAmount !== null && Number(amount) !== ocrExtractedAmount;
         const expense = await Expense.create({
             employee: req.user.userId,
             travelRequest,
@@ -91,6 +104,9 @@ const createExpense = async (req, res) => {
             expenseDate,
             description,
             receiptUrl,
+            ocrText,
+            ocrExtractedAmount,
+            ocrAmountMismatch,
             policyFlag: policyResult.policyFlag,
             policyMessage: policyResult.policyMessage,
             status: "PENDING",
