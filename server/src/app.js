@@ -6,6 +6,7 @@ const morgan = require("morgan");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const travelRequestRoutes = require("./routes/travelRequestRoutes");
+const expenseRoutes = require("./routes/expenseRoutes");
 
 const app = express();
 
@@ -32,5 +33,6 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/travel-requests",travelRequestRoutes);
+app.use("/api/expenses",expenseRoutes);
 
 module.exports = app;
