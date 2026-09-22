@@ -3,6 +3,9 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 
+const authRoutes = require("./routes/authRoutes")
+const userRoutes = require("./routes/userRoutes");
+
 const app = express();
 
 // Security middleware
@@ -24,5 +27,8 @@ app.get("/api/health", (req, res) => {
         message: "Travel & Expense API is running",
     });
 });
+
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
 module.exports = app;
