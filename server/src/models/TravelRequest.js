@@ -18,6 +18,7 @@ const travelRequestSchema = new mongoose.Schema(
             type: String,
             required: true,
             trim: true,
+            maxlength: 500,
         },
 
         startDate: {
@@ -38,17 +39,23 @@ const travelRequestSchema = new mongoose.Schema(
 
         status: {
             type: String,
-            enum: [
-                "PENDING",
-                "APPROVED",
-                "REJECTED",
-            ],
+            enum: ["PENDING", "APPROVED", "REJECTED"],
             default: "PENDING",
         },
 
         managerComment: {
             type: String,
             trim: true,
+            maxlength: 500,
+        },
+
+        reviewedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        },
+
+        reviewedAt: {
+            type: Date,
         },
     },
     {

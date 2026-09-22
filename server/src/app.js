@@ -3,8 +3,9 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 
-const authRoutes = require("./routes/authRoutes")
+const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const travelRequestRoutes = require("./routes/travelRequestRoutes");
 
 const app = express();
 
@@ -30,5 +31,6 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/travel-requests",travelRequestRoutes);
 
 module.exports = app;
