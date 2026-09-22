@@ -27,23 +27,23 @@ const createExpense = async (req, res) => {
         if (
             !travelRequest ||
             !category ||
-            amount === undefined ||
+            !amount ||
             !expenseDate
         ) {
             return res.status(400).json({
                 success: false,
-                message: "Required expense fields are missing",
+                message:
+                    "Travel request, category, amount and expense date are required",
             });
         }
 
-        if (amount <= 0) {
+        if (Number(amount) <= 0) {
             return res.status(400).json({
                 success: false,
-                message: "Expense amount must be greater than zero",
+                message: "Amount must be greater than 0",
             });
         }
 
-        // Find travel request
         const request = await TravelRequest.findById(
             travelRequest
         );
@@ -55,77 +55,103 @@ const createExpense = async (req, res) => {
             });
         }
 
-        // Employee can only submit expenses for their own request
         if (
             request.employee.toString() !==
-            req.user.userId.toString()
+            req.user.userId
         ) {
             return res.status(403).json({
                 success: false,
                 message:
-                    "You cannot add expenses to another employee's travel request",
+                    "You can only create expenses for your own travel requests",
             });
         }
 
-        // Expense should only be submitted for approved travel
         if (request.status !== "APPROVED") {
             return res.status(400).json({
                 success: false,
                 message:
-                    "Expenses can only be submitted for approved travel requests",
+                    "Expense can only be created for an approved travel request",
             });
         }
 
-        // Check policy
-        const policyResult = await checkExpensePolicy(
-            category,
-            amount
-        );
+        // Policy check
+        const policyResult =
+            await checkExpensePolicy(
+                req.user.userId,
+                category,
+                Number(amount),
+                expenseDate
+            );
+
+        // Extract policy result
+        const {
+            policyFlag,
+            policyMessage,
+        } = policyResult;
+
+        // Receipt upload + OCR
         let receiptUrl;
         let ocrText;
         let ocrExtractedAmount;
 
         if (req.file) {
-        const uploadResult = await uploadToCloudinary(
-            req.file.buffer
-        );
-            receiptUrl = uploadResult.secure_url;
-            
-            ocrText = await extractTextFromImage(req.file.buffer);
+            const uploadResult =
+                await uploadToCloudinary(
+                    req.file.buffer
+                );
 
-            ocrExtractedAmount = extractTotalAmount(ocrText);
+            receiptUrl =
+                uploadResult.secure_url;
+
+            ocrText =
+                await extractTextFromImage(
+                    req.file.buffer
+                );
+
+            ocrExtractedAmount =
+                extractTotalAmount(ocrText);
         }
-        const ocrAmountMismatch = ocrExtractedAmount !== null && Number(amount) !== ocrExtractedAmount;
+
+        // OCR amount mismatch
+        const ocrAmountMismatch =
+            ocrExtractedAmount !== null &&
+            Number(amount) !==
+                ocrExtractedAmount;
+
         const expense = await Expense.create({
             employee: req.user.userId,
             travelRequest,
             category,
-            amount,
+            amount: Number(amount),
             expenseDate,
             description,
             receiptUrl,
             ocrText,
             ocrExtractedAmount,
             ocrAmountMismatch,
-            policyFlag: policyResult.policyFlag,
-            policyMessage: policyResult.policyMessage,
+            policyFlag,
+            policyMessage,
             status: "PENDING",
         });
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
-            message: "Expense submitted successfully",
+            message: "Expense created successfully",
             expense,
         });
     } catch (error) {
-        console.error("Create expense error:", error);
+        console.error(
+            "Create expense error:",
+            error.message
+        );
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
         });
     }
 };
+
 const getMyExpenses = async (req, res) => {
     try {
         const expenses = await Expense.find({
