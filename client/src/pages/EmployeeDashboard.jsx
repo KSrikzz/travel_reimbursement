@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
 import { getEmployeeDashboard } from "../api/dashboardApi";
@@ -8,7 +9,7 @@ const EmployeeDashboard = () => {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  const navigate = useNavigate();
   useEffect(() => {
     const loadDashboard = async () => {
       try {
@@ -60,6 +61,7 @@ const EmployeeDashboard = () => {
             <p>₹{dashboard?.reimbursedAmount}</p>
           </div>
         </section>
+        <button onClick={() => navigate("/travel-requests")}>Manage Travel Requests</button>
       </main>
     </>
   );

@@ -8,6 +8,7 @@ import FinanceDashboard from "./pages/FinanceDashboard";
 import DashboardRedirect from "./pages/DashboardRedirect";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
+import TravelRequests from "./pages/TravelRequests";
 
 const App = () => {
   return (
@@ -21,6 +22,7 @@ const App = () => {
 
           <Route element={<RoleRoute allowedRoles={["EMPLOYEE"]} />}>
             <Route path="/dashboard/employee" element={<EmployeeDashboard />} />
+            <Route path="/travel-requests" element={<TravelRequests />}/>
           </Route>
 
           <Route element={<RoleRoute allowedRoles={["MANAGER"]} />}>
