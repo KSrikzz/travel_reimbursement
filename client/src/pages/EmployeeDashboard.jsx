@@ -63,6 +63,7 @@ const EmployeeDashboard = () => {
         </section>
         <button onClick={() => navigate("/travel-requests")}>Manage Travel Requests</button>
         <button onClick={() => navigate("/expenses")}>Manage Expenses</button>
+        <button onClick={() => navigate("/my-reimbursements")}>My Reimbursements</button>
       </main>
     </>
   );

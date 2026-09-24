@@ -13,6 +13,7 @@ import ManagerTravelRequests from "./pages/ManagerTravelRequests";
 import Expenses from "./pages/Expenses";
 import ManagerExpenses from "./pages/ManagerExpenses";
 import FinanceReimbursements from "./pages/FinanceReimbursements";
+import MyReimbursements from "./pages/MyReimbursements";
 
 const App = () => {
   return (
@@ -28,6 +29,7 @@ const App = () => {
             <Route path="/dashboard/employee" element={<EmployeeDashboard />} />
             <Route path="/travel-requests" element={<TravelRequests />}/>
             <Route path="/expenses" element={<Expenses />}/>
+            <Route path="/my-reimbursements" element={<MyReimbursements />}/>
           </Route>
 
           <Route element={<RoleRoute allowedRoles={["MANAGER"]} />}>
