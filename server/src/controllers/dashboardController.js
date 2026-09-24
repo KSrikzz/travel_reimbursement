@@ -145,7 +145,7 @@ const getManagerDashboard = async (req, res) => {
 const getFinanceDashboard = async (req, res) => {
     try {
         const [
-            pendingExpenses,
+            approvedExpenses,
             reimbursedExpenses,
             rejectedExpenses,
             reimbursementSummary,
@@ -187,7 +187,7 @@ const getFinanceDashboard = async (req, res) => {
         return res.status(200).json({
             success: true,
             dashboard: {
-                pendingExpenses,
+                approvedExpenses,
                 reimbursedExpenses,
                 rejectedExpenses,
                 totalReimbursed,

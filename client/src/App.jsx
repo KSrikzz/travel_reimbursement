@@ -12,6 +12,7 @@ import TravelRequests from "./pages/TravelRequests";
 import ManagerTravelRequests from "./pages/ManagerTravelRequests";
 import Expenses from "./pages/Expenses";
 import ManagerExpenses from "./pages/ManagerExpenses";
+import FinanceReimbursements from "./pages/FinanceReimbursements";
 
 const App = () => {
   return (
@@ -37,6 +38,7 @@ const App = () => {
 
           <Route element={<RoleRoute allowedRoles={["FINANCE"]} />}>
             <Route path="/dashboard/finance" element={<FinanceDashboard />} />
+            <Route path="/finance/reimbursements" element={<FinanceReimbursements />}/>
           </Route>
         </Route>
 

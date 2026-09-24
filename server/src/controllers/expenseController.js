@@ -206,6 +206,34 @@ const getPendingExpenses = async (req, res) => {
         });
     }
 };
+const getApprovedExpenses = async (req, res) => {
+  try {
+    const expenses = await Expense.find({
+      status: "APPROVED",
+    })
+      .populate("employee", "name email department")
+      .populate(
+        "travelRequest",
+        "destination purpose startDate endDate"
+      )
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      expenses,
+    });
+  } catch (error) {
+    console.error(
+      "Get approved expenses error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch approved expenses",
+    });
+  }
+};
 const updateExpenseStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -261,4 +289,5 @@ module.exports = {
     getMyExpenses,
     getPendingExpenses,
     updateExpenseStatus,
+    getApprovedExpenses,
 };

@@ -6,6 +6,7 @@ const {
     getMyExpenses,
     getPendingExpenses,
     updateExpenseStatus,
+    getApprovedExpenses,
 } = require("../controllers/expenseController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -40,6 +41,13 @@ router.patch(
     protect,
     authorize("MANAGER", "FINANCE"),
     updateExpenseStatus
+);
+
+router.get(
+    "/approved",
+    protect,
+    authorize("FINANCE"),
+    getApprovedExpenses
 );
 
 module.exports = router;
