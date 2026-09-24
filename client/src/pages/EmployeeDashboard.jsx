@@ -62,6 +62,7 @@ const EmployeeDashboard = () => {
           </div>
         </section>
         <button onClick={() => navigate("/travel-requests")}>Manage Travel Requests</button>
+        <button onClick={() => navigate("/expenses")}>Manage Expenses</button>
       </main>
     </>
   );
