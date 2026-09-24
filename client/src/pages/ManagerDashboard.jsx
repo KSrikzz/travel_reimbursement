@@ -77,13 +77,8 @@ const ManagerDashboard = () => {
         </section>
 
         <section>
-          <button
-            onClick={() =>
-              navigate("/manager/travel-requests")
-            }
-          >
-            Review Travel Requests
-          </button>
+          <button onClick={() => navigate("/manager/travel-requests")}>Review Travel Requests</button>
+          <button onClick={() => navigate("/manager/expenses")}>Review Expenses</button>
         </section>
       </main>
     </>

@@ -11,6 +11,7 @@ import RoleRoute from "./routes/RoleRoute";
 import TravelRequests from "./pages/TravelRequests";
 import ManagerTravelRequests from "./pages/ManagerTravelRequests";
 import Expenses from "./pages/Expenses";
+import ManagerExpenses from "./pages/ManagerExpenses";
 
 const App = () => {
   return (
@@ -31,6 +32,7 @@ const App = () => {
           <Route element={<RoleRoute allowedRoles={["MANAGER"]} />}>
             <Route path="/dashboard/manager" element={<ManagerDashboard />} />
             <Route path="/manager/travel-requests" element={<ManagerTravelRequests />}/>
+            <Route path="/manager/expenses" element={<ManagerExpenses />}/>
           </Route>
 
           <Route element={<RoleRoute allowedRoles={["FINANCE"]} />}>
