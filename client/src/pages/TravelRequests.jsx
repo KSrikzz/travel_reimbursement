@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
+import AppLayout from "../components/AppLayout";
 import {
   getMyTravelRequests,
   createTravelRequest,
 } from "../api/travelRequestApi";
+import PageHeader from "../components/PageHeader";
+import Card from "../components/Card";
+import Button from "../components/Button";
+import FormField from "../components/FormField";
+import StatusBadge from "../components/StatusBadge";
+import Alert from "../components/Alert";
+import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
+import EmptyState from "../components/EmptyState";
 
 const TravelRequests = () => {
   const [requests, setRequests] = useState([]);
@@ -111,146 +120,155 @@ const TravelRequests = () => {
     }
   };
 
-  const getStatusClass = (status) => {
-    switch (status) {
-      case "APPROVED":
-        return "status-approved";
-
-      case "REJECTED":
-        return "status-rejected";
-
-      case "PENDING":
-        return "status-pending";
-
-      default:
-        return "";
-    }
-  };
-
   return (
-    <>
-      <Navbar />
-      <main>
-        <h1>Travel Requests</h1>
-        {error && (
-          <p style={{ color: "red" }}>
-            {error}
-          </p>
-        )}
-        {success && (
-          <p style={{ color: "green" }}>
-            {success}
-          </p>
-        )}
-        <section>
-          <h2>Create Travel Request</h2>
-          <form onSubmit={handleSubmit}>
-            <div>
-              <label>Destination</label>
+    <AppLayout>
+      <PageHeader
+        title="Travel Requests"
+        subtitle="Submit a new travel request or check the status of previous ones."
+      />
+
+      {}
+      {error && (
+        <Alert type="error" onDismiss={() => setError("")}>
+          {error}
+        </Alert>
+      )}
+      {success && (
+        <Alert type="success" onDismiss={() => setSuccess("")}>
+          {success}
+        </Alert>
+      )}
+
+      {}
+      <Card className="dashboard-section">
+        <h2 style={{ marginBottom: "var(--space-4)" }}>
+          Create Travel Request
+        </h2>
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-grid">
+            <FormField label="Destination" htmlFor="tr-destination">
               <input
+                id="tr-destination"
                 type="text"
                 name="destination"
                 value={form.destination}
                 onChange={handleChange}
-                placeholder="Example: Bangalore"
+                placeholder="e.g. Bangalore"
               />
-            </div>
-            <div>
-              <label>Purpose</label>
-              <textarea
-                name="purpose"
-                value={form.purpose}
-                onChange={handleChange}
-                placeholder="Explain the purpose of the trip"
-              />
-            </div>
-            <div>
-              <label>Start Date</label>
+            </FormField>
+
+            <FormField label="Estimated Budget (₹)" htmlFor="tr-budget">
               <input
+                id="tr-budget"
+                type="number"
+                name="estimatedBudget"
+                value={form.estimatedBudget}
+                onChange={handleChange}
+                placeholder="e.g. 15000"
+                min="0"
+              />
+            </FormField>
+
+            <FormField label="Start Date" htmlFor="tr-start">
+              <input
+                id="tr-start"
                 type="date"
                 name="startDate"
                 value={form.startDate}
                 onChange={handleChange}
               />
-            </div>
-            <div>
-              <label>End Date</label>
+            </FormField>
+
+            <FormField label="End Date" htmlFor="tr-end">
               <input
+                id="tr-end"
                 type="date"
                 name="endDate"
                 value={form.endDate}
                 onChange={handleChange}
               />
+            </FormField>
+
+            <div className="form-grid--full">
+              <FormField label="Purpose" htmlFor="tr-purpose">
+                <textarea
+                  id="tr-purpose"
+                  name="purpose"
+                  value={form.purpose}
+                  onChange={handleChange}
+                  placeholder="Describe the purpose of the trip"
+                />
+              </FormField>
             </div>
-            <div>
-              <label>Estimated Budget</label>
-              <input
-                type="number"
-                name="estimatedBudget"
-                value={form.estimatedBudget}
-                onChange={handleChange}
-                placeholder="Example: 15000"
-                min="0"
-              />
-            </div>
-            <button type="submit" disabled={submitting}>
+          </div>
+
+          <div style={{ marginTop: "var(--space-4)" }}>
+            <Button type="submit" variant="primary" loading={submitting}>
               {submitting ? "Submitting..." : "Submit Request"}
-            </button>
-          </form>
-        </section>
-        <hr />
-        <section>
-          <h2>My Travel Requests</h2>
-          {loading ? (
-            <p>Loading travel requests...</p>
-          ) : requests.length === 0 ? (
-            <p>No travel requests found.</p>
-          ) : (
-            <div>
-              {requests.map((request) => (
-                <article key={request._id}>
-                  <h3>{request.destination}</h3>
+            </Button>
+          </div>
+        </form>
+      </Card>
 
-                  <p>
-                    <strong>Purpose:</strong>{" "}
-                    {request.purpose}
-                  </p>
+      {}
+      <div className="dashboard-section">
+        <h2 className="dashboard-section__title">My Travel Requests</h2>
 
-                  <p>
-                    <strong>Start:</strong>{" "}
-                    {new Date(request.startDate).toLocaleDateString()}
-                  </p>
+        {loading ? (
+          <LoadingState message="Loading travel requests..." />
+        ) : requests.length === 0 ? (
+          <EmptyState
+            message="You haven't submitted any travel requests yet. Use the form above to create one."
+          />
+        ) : (
+          <div className="request-list">
+            {requests.map((request) => (
+              <Card key={request._id}>
+                <div className="request-card__header">
+                  <h3 className="request-card__title">
+                    {request.destination}
+                  </h3>
+                  <StatusBadge status={request.status} />
+                </div>
 
-                  <p>
-                    <strong>End:</strong>{" "}
-                    {new Date(request.endDate).toLocaleDateString()}
-                  </p>
-
-                  <p>
-                    <strong>Estimated Budget:</strong>{" "}
-                    ₹{request.estimatedBudget}
-                  </p>
-
-                  <p>
-                    <strong>Status:</strong>{" "}
-                    <span className={getStatusClass(request.status)}>
-                      {request.status}
+                <div className="request-card__details">
+                  <div className="data-row">
+                    <span className="data-row__label">Purpose</span>
+                    <span className="data-row__value">{request.purpose}</span>
+                  </div>
+                  <div className="data-row">
+                    <span className="data-row__label">Budget</span>
+                    <span className="data-row__value">₹{request.estimatedBudget}</span>
+                  </div>
+                  <div className="data-row">
+                    <span className="data-row__label">Start Date</span>
+                    <span className="data-row__value">
+                      {new Date(request.startDate).toLocaleDateString()}
                     </span>
-                  </p>
+                  </div>
+                  <div className="data-row">
+                    <span className="data-row__label">End Date</span>
+                    <span className="data-row__value">
+                      {new Date(request.endDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
 
-                  {request.managerComment && (
-                    <p>
-                      <strong>Manager Comment:</strong>{" "}
-                      {request.managerComment}
-                    </p>
-                  )}
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-      </main>
-    </>
+                {request.managerComment && (
+                  <div className="request-card__comment">
+                    <div className="request-card__comment-label">
+                      Manager Comment
+                    </div>
+                    {request.managerComment}
+                  </div>
+                )}
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </AppLayout>
   );
 };
 

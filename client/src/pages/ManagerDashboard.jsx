@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-import Navbar from "../components/Navbar";
+import AppLayout from "../components/AppLayout";
 import { useAuth } from "../context/AuthContext";
 import { getManagerDashboard } from "../api/dashboardApi";
+import PageHeader from "../components/PageHeader";
+import StatCard from "../components/StatCard";
+import Button from "../components/Button";
+import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
 
 const ManagerDashboard = () => {
   const { user } = useAuth();
@@ -13,75 +17,110 @@ const ManagerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const data = await getManagerDashboard();
+      setDashboard(data.dashboard);
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          "Failed to load manager dashboard"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        const data = await getManagerDashboard();
-
-        setDashboard(data.dashboard);
-      } catch (error) {
-        setError(
-          error.response?.data?.message ||
-            "Failed to load manager dashboard"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadDashboard();
   }, []);
 
   if (loading) {
-    return <p>Loading dashboard...</p>;
+    return (
+      <AppLayout>
+        <LoadingState message="Loading manager dashboard..." />
+      </AppLayout>
+    );
   }
 
   if (error) {
-    return <p>{error}</p>;
+    return (
+      <AppLayout>
+        <ErrorState message={error} onRetry={loadDashboard} />
+      </AppLayout>
+    );
   }
 
   return (
-    <>
-      <Navbar />
+    <AppLayout>
+      <PageHeader
+        title={`Welcome, ${user?.name}`}
+        subtitle="Review and manage your team's travel requests and expenses."
+      />
 
-      <main>
-        <h1>Manager Dashboard</h1>
+      {}
+      <div className="dashboard-stats">
+        <StatCard
+          label="Pending Travel Requests"
+          value={dashboard?.pendingTravelRequests ?? 0}
+          variant="warning"
+          helperText="Needs your review"
+        />
+        <StatCard
+          label="Pending Expenses"
+          value={dashboard?.pendingExpenses ?? 0}
+          variant="warning"
+          helperText="Needs your review"
+        />
+        <StatCard
+          label="Approved Expenses"
+          value={dashboard?.approvedExpenses ?? 0}
+          variant="success"
+        />
+        <StatCard
+          label="Rejected Expenses"
+          value={dashboard?.rejectedExpenses ?? 0}
+          variant="danger"
+        />
+      </div>
 
-        <p>Welcome, {user?.name}</p>
+      {}
+      <div className="dashboard-stats" style={{ marginTop: 0 }}>
+        <StatCard
+          label="Reimbursed Expenses"
+          value={dashboard?.reimbursedExpenses ?? 0}
+          variant="info"
+          helperText="Processed by finance"
+        />
+      </div>
 
-        <section>
-          <div>
-            <h3>Pending Travel Requests</h3>
-            <p>{dashboard?.pendingTravelRequests}</p>
-          </div>
-
-          <div>
-            <h3>Pending Expenses</h3>
-            <p>{dashboard?.pendingExpenses}</p>
-          </div>
-
-          <div>
-            <h3>Approved Expenses</h3>
-            <p>{dashboard?.approvedExpenses}</p>
-          </div>
-
-          <div>
-            <h3>Rejected Expenses</h3>
-            <p>{dashboard?.rejectedExpenses}</p>
-          </div>
-
-          <div>
-            <h3>Reimbursed Expenses</h3>
-            <p>{dashboard?.reimbursedExpenses}</p>
-          </div>
-        </section>
-
-        <section>
-          <button onClick={() => navigate("/manager/travel-requests")}>Review Travel Requests</button>
-          <button onClick={() => navigate("/manager/expenses")}>Review Expenses</button>
-        </section>
-      </main>
-    </>
+      {}
+      <div className="dashboard-section">
+        <h2 className="dashboard-section__title">Quick Actions</h2>
+        <div className="dashboard-actions">
+          <Button
+            variant="primary"
+            onClick={() => navigate("/manager/travel-requests")}
+          >
+            Review Travel Requests
+            {(dashboard?.pendingTravelRequests ?? 0) > 0 && (
+              <span> ({dashboard.pendingTravelRequests})</span>
+            )}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => navigate("/manager/expenses")}
+          >
+            Review Expenses
+            {(dashboard?.pendingExpenses ?? 0) > 0 && (
+              <span> ({dashboard.pendingExpenses})</span>
+            )}
+          </Button>
+        </div>
+      </div>
+    </AppLayout>
   );
 };
 

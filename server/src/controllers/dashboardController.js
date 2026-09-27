@@ -151,7 +151,7 @@ const getFinanceDashboard = async (req, res) => {
             reimbursementSummary,
         ] = await Promise.all([
             Expense.countDocuments({
-                status: "PENDING",
+                status: "APPROVED",
             }),
 
             Expense.countDocuments({

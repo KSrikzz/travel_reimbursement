@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
+import AppLayout from "../components/AppLayout";
+import PageHeader from "../components/PageHeader";
+import Card from "../components/Card";
+import StatusBadge from "../components/StatusBadge";
+import Alert from "../components/Alert";
+import LoadingState from "../components/LoadingState";
+import EmptyState from "../components/EmptyState";
 import { getMyReimbursements } from "../api/reimbursementApi";
 
 const MyReimbursements = () => {
@@ -10,11 +16,13 @@ const MyReimbursements = () => {
   useEffect(() => {
     const loadReimbursements = async () => {
       try {
+        setLoading(true);
+        setError("");
         const data = await getMyReimbursements();
         setReimbursements(data.reimbursements || []);
-      } catch (error) {
+      } catch (err) {
         setError(
-          error.response?.data?.message ||
+          err.response?.data?.message ||
             "Failed to load reimbursement history"
         );
       } finally {
@@ -26,91 +34,121 @@ const MyReimbursements = () => {
   }, []);
 
   if (loading) {
-    return <p>Loading reimbursement history...</p>;
-  }
-
-  if (error) {
     return (
-      <>
-        <Navbar />
-        <main>
-          <h1>My Reimbursements</h1>
-          <p>{error}</p>
-        </main>
-      </>
+      <AppLayout>
+        <LoadingState message="Loading your reimbursement history..." />
+      </AppLayout>
     );
   }
 
   return (
-    <>
-      <Navbar />
+    <AppLayout>
+      <PageHeader
+        title="My Reimbursements"
+        subtitle="Track payment disbursements, audit reference transaction IDs, and settlement records"
+      />
 
-      <main>
-        <h1>My Reimbursements</h1>
+      {error && (
+        <Alert type="error" onDismiss={() => setError("")}>
+          {error}
+        </Alert>
+      )}
 
-        {reimbursements.length === 0 ? (
-          <p>No reimbursements found.</p>
-        ) : (
-          <section>
-            {reimbursements.map((reimbursement) => (
-              <div key={reimbursement._id}>
-                <h3>
-                  {reimbursement.expense?.category || "Expense"}
-                </h3>
+      {reimbursements.length === 0 ? (
+        <EmptyState message="No reimbursements found. Approved expenses will appear here once disbursed by Finance." />
+      ) : (
+        <Card className="reimbursement-table-card reimbursement-table-mobile">
+          <div className="table-responsive">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Transaction ID</th>
+                  <th>Processed Date</th>
+                  <th>Receipt</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reimbursements.map((item) => (
+                  <tr key={item._id}>
+                    <td data-label="Category">
+                      <div>
+                        <strong>{item.expense?.category || "Expense"}</strong>
+                        {item.expense?.description && (
+                          <div
+                            style={{
+                              fontSize: "var(--font-size-xs)",
+                              color: "var(--text-muted)",
+                              marginTop: "var(--space-1)",
+                            }}
+                          >
+                            {item.expense.description}
+                          </div>
+                        )}
+                      </div>
+                    </td>
 
-                <p>
-                  <strong>Amount:</strong> ₹
-                  {reimbursement.amount}
-                </p>
+                    <td data-label="Amount">
+                      <span style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--text)" }}>
+                        ₹{item.amount}
+                      </span>
+                    </td>
 
-                <p>
-                  <strong>Expense Date:</strong>{" "}
-                  {reimbursement.expense?.expenseDate
-                    ? new Date(
-                        reimbursement.expense.expenseDate
-                      ).toLocaleDateString()
-                    : "N/A"}
-                </p>
+                    <td data-label="Status">
+                      <StatusBadge status={item.status} />
+                    </td>
 
-                <p>
-                  <strong>Description:</strong>{" "}
-                  {reimbursement.expense?.description || "N/A"}
-                </p>
+                    <td data-label="Transaction ID">
+                      <code
+                        style={{
+                          fontSize: "var(--font-size-xs)",
+                          backgroundColor: "var(--background)",
+                          padding: "2px 6px",
+                          borderRadius: "var(--radius-sm)",
+                          border: "1px solid var(--border-light)",
+                        }}
+                      >
+                        {item.transactionId || "—"}
+                      </code>
+                    </td>
 
-                <p>
-                  <strong>Status:</strong>{" "}
-                  {reimbursement.status}
-                </p>
+                    <td data-label="Processed Date">
+                      <span style={{ fontSize: "var(--font-size-sm)", color: "var(--text-secondary)" }}>
+                        {item.processedAt
+                          ? new Date(item.processedAt).toLocaleString()
+                          : "—"}
+                      </span>
+                    </td>
 
-                <p>
-                  <strong>Transaction ID:</strong>{" "}
-                  {reimbursement.transactionId}
-                </p>
-
-                <p>
-                  <strong>Processed At:</strong>{" "}
-                  {reimbursement.processedAt
-                    ? new Date(
-                        reimbursement.processedAt
-                      ).toLocaleString()
-                    : "N/A"}
-                </p>
-
-                {reimbursement.expense?.receiptUrl && (
-                  <a
-                    href={reimbursement.expense.receiptUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    View Receipt
-                  </a>
-                )}
-              </div>
-            ))}
-          </section>
-        )}
-      </main>
-    </>
+                    <td data-label="Receipt">
+                      {item.expense?.receiptUrl ? (
+                        <a
+                          href={item.expense.receiptUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn--ghost"
+                          style={{
+                            padding: "0.25rem 0.5rem",
+                            fontSize: "var(--font-size-xs)",
+                            display: "inline-flex",
+                          }}
+                        >
+                          View ↗
+                        </a>
+                      ) : (
+                        <span style={{ color: "var(--text-muted)" }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </AppLayout>
   );
 };
 

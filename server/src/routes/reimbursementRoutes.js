@@ -14,7 +14,7 @@ const router = express.Router();
 router.patch(
     "/:id/process",
     protect,
-    authorize("MANAGER", "FINANCE"),
+    authorize("FINANCE"),
     processReimbursement
 );
 

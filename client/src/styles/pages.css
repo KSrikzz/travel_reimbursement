@@ -1,0 +1,307 @@
+/* ============================================================
+   PAGES.CSS — Page-Specific Styles
+   ============================================================ */
+
+/* ========================
+   AUTH PAGES (Login / Register)
+   ======================== */
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-4);
+  background-color: var(--background);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.auth-card__header {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.auth-card__brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-3);
+}
+
+.auth-card__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-1);
+}
+
+.auth-card__subtitle {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.auth-footer a {
+  color: var(--primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ========================
+   DASHBOARD PAGES
+   ======================== */
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.dashboard-section {
+  margin-top: var(--space-8);
+}
+
+.dashboard-section__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 1024px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-actions {
+    flex-direction: column;
+  }
+  .dashboard-actions .btn {
+    width: 100%;
+  }
+}
+
+/* ========================
+   TRAVEL REQUESTS PAGE
+   ======================== */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.form-grid--full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Request list */
+.request-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.request-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.request-card__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.request-card__details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-6);
+}
+
+.request-card__comment {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background-color: var(--background);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.request-card__comment-label {
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-xs);
+}
+
+.request-card__comment-label::after {
+  content: ":";
+}
+
+@media (max-width: 640px) {
+  .request-card__details {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========================
+   EXPENSE PAGES
+   ======================== */
+.expense-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.expense-card__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.expense-card__amount {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text);
+}
+
+.expense-card__meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .expense-card__meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* OCR / Policy warnings section */
+.verification-section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-light);
+}
+
+.verification-section__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.verification-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) 0;
+}
+
+.verification-item__icon {
+  flex-shrink: 0;
+  font-size: var(--font-size-md);
+}
+
+/* ========================
+   FINANCE REIMBURSEMENT PAGE
+   ======================== */
+.reimbursement-card__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-6);
+}
+
+@media (max-width: 640px) {
+  .reimbursement-card__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========================
+   MY REIMBURSEMENTS — table style
+   ======================== */
+.reimbursement-table-card {
+  overflow: hidden;
+}
+
+.reimbursement-table-card .table-responsive {
+  margin: calc(-1 * var(--space-5));
+  margin-top: 0;
+  width: calc(100% + 2 * var(--space-5));
+}
+
+/* On mobile, turn table rows into stacked cards */
+@media (max-width: 768px) {
+  .reimbursement-table-mobile .table thead {
+    display: none;
+  }
+
+  .reimbursement-table-mobile .table tbody tr {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .reimbursement-table-mobile .table td {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-1) 0;
+    border: none;
+  }
+
+  .reimbursement-table-mobile .table td::before {
+    content: attr(data-label) ":";
+    font-weight: var(--font-weight-medium);
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    min-width: 8rem;
+  }
+}

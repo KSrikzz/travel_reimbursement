@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
-
-import Navbar from "../components/Navbar";
+import AppLayout from "../components/AppLayout";
+import PageHeader from "../components/PageHeader";
+import Card from "../components/Card";
+import Button from "../components/Button";
+import Alert from "../components/Alert";
+import LoadingState from "../components/LoadingState";
+import EmptyState from "../components/EmptyState";
+import Modal from "../components/Modal";
 
 import {
   getApprovedExpenses,
@@ -9,11 +15,13 @@ import {
 
 const FinanceReimbursements = () => {
   const [expenses, setExpenses] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState(null);
 
   const loadExpenses = async () => {
     try {
@@ -23,9 +31,9 @@ const FinanceReimbursements = () => {
       const data = await getApprovedExpenses();
 
       setExpenses(data.expenses || []);
-    } catch (error) {
+    } catch (err) {
       setError(
-        error.response?.data?.message ||
+        err.response?.data?.message ||
           "Failed to load approved expenses"
       );
     } finally {
@@ -37,25 +45,24 @@ const FinanceReimbursements = () => {
     loadExpenses();
   }, []);
 
-  const handleReimbursement = async (expenseId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to process this reimbursement?"
-    );
+  const openProcessModal = (expense) => {
+    setSelectedExpense(expense);
+    setConfirmModalOpen(true);
+  };
 
-    if (!confirmed) {
-      return;
-    }
+  const handleConfirmReimbursement = async () => {
+    if (!selectedExpense) return;
+    const expenseId = selectedExpense._id;
 
     try {
       setProcessingId(expenseId);
       setError("");
       setSuccess("");
 
-      const data =
-        await processReimbursement(expenseId);
+      const data = await processReimbursement(expenseId);
 
       setSuccess(
-        `Reimbursement completed. Transaction ID: ${data.reimbursement.transactionId}`
+        `Reimbursement completed successfully. Transaction ID: ${data.reimbursement.transactionId}`
       );
 
       setExpenses((previousExpenses) =>
@@ -63,9 +70,12 @@ const FinanceReimbursements = () => {
           (expense) => expense._id !== expenseId
         )
       );
-    } catch (error) {
+
+      setConfirmModalOpen(false);
+      setSelectedExpense(null);
+    } catch (err) {
       setError(
-        error.response?.data?.message ||
+        err.response?.data?.message ||
           "Failed to process reimbursement"
       );
     } finally {
@@ -74,164 +84,252 @@ const FinanceReimbursements = () => {
   };
 
   if (loading) {
-    return <p>Loading approved expenses...</p>;
+    return (
+      <AppLayout>
+        <LoadingState message="Loading approved expenses awaiting payout..." />
+      </AppLayout>
+    );
   }
 
   return (
-    <>
-      <Navbar />
+    <AppLayout>
+      <PageHeader
+        title="Process Reimbursements"
+        subtitle="Review manager-approved expenses and execute reimbursement payouts"
+      />
 
-      <main>
-        <h1>Reimbursements</h1>
+      {error && (
+        <Alert type="error" onDismiss={() => setError("")}>
+          {error}
+        </Alert>
+      )}
 
-        {error && (
-          <p style={{ color: "red" }}>
-            {error}
-          </p>
-        )}
+      {success && (
+        <Alert type="success" onDismiss={() => setSuccess("")}>
+          {success}
+        </Alert>
+      )}
 
-        {success && (
-          <p style={{ color: "green" }}>
-            {success}
-          </p>
-        )}
+      {expenses.length === 0 ? (
+        <EmptyState message="No approved expenses waiting for reimbursement. All manager-approved claims have been disbursed." />
+      ) : (
+        <div className="request-list">
+          {expenses.map((expense) => {
+            const hasOcrMismatch = expense.ocrAmountMismatch;
+            const hasPolicyFlag = expense.policyFlag;
 
-        {expenses.length === 0 ? (
-          <p>
-            No approved expenses waiting for
-            reimbursement.
-          </p>
-        ) : (
-          <section>
-            {expenses.map((expense) => (
-              <article key={expense._id}>
-                <h2>
-                  {expense.category}
-                </h2>
+            return (
+              <Card key={expense._id}>
+                {}
+                <div className="expense-card__header">
+                  <div>
+                    <span
+                      className="badge badge--neutral"
+                      style={{ marginRight: "var(--space-2)" }}
+                    >
+                      {expense.category}
+                    </span>
+                    <span className="expense-card__amount">₹{expense.amount}</span>
+                  </div>
 
-                <p>
-                  <strong>Employee:</strong>{" "}
-                  {expense.employee?.name}
-                </p>
+                  <span className="badge badge--approved">
+                    <span className="badge__dot" aria-hidden="true" />
+                    Manager Approved
+                  </span>
+                </div>
 
-                <p>
-                  <strong>Email:</strong>{" "}
-                  {expense.employee?.email}
-                </p>
+                {}
+                <div className="reimbursement-card__grid">
+                  <div>
+                    <span className="data-label">Employee</span>
+                    <span className="data-value">
+                      {expense.employee?.name || "Unknown"}
+                    </span>
+                  </div>
 
-                <p>
-                  <strong>Department:</strong>{" "}
-                  {expense.employee?.department}
-                </p>
+                  <div>
+                    <span className="data-label">Department</span>
+                    <span className="data-value">
+                      {expense.employee?.department || "N/A"}
+                    </span>
+                  </div>
 
-                <p>
-                  <strong>Amount:</strong>{" "}
-                  ₹{expense.amount}
-                </p>
+                  <div>
+                    <span className="data-label">Email</span>
+                    <span className="data-value">
+                      {expense.employee?.email || "N/A"}
+                    </span>
+                  </div>
 
-                <p>
-                  <strong>Expense Date:</strong>{" "}
-                  {new Date(
-                    expense.expenseDate
-                  ).toLocaleDateString()}
-                </p>
+                  <div>
+                    <span className="data-label">Expense Date</span>
+                    <span className="data-value">
+                      {new Date(expense.expenseDate).toLocaleDateString()}
+                    </span>
+                  </div>
 
-                <p>
-                  <strong>Description:</strong>{" "}
-                  {expense.description || "N/A"}
-                </p>
+                  {expense.travelRequest && (
+                    <>
+                      <div>
+                        <span className="data-label">Trip Destination</span>
+                        <span className="data-value">
+                          {expense.travelRequest.destination}
+                        </span>
+                      </div>
 
-                {expense.travelRequest && (
-                  <>
-                    <h3>Travel Request</h3>
+                      <div>
+                        <span className="data-label">Trip Purpose</span>
+                        <span className="data-value">
+                          {expense.travelRequest.purpose}
+                        </span>
+                      </div>
+                    </>
+                  )}
 
-                    <p>
-                      <strong>Destination:</strong>{" "}
-                      {
-                        expense.travelRequest
-                          .destination
-                      }
-                    </p>
+                  {expense.description && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <span className="data-label">Expense Description</span>
+                      <span className="data-value">{expense.description}</span>
+                    </div>
+                  )}
+                </div>
 
-                    <p>
-                      <strong>Purpose:</strong>{" "}
-                      {
-                        expense.travelRequest
-                          .purpose
-                      }
-                    </p>
-                  </>
-                )}
+                {}
+                <div className="verification-section">
+                  <div className="verification-section__title">
+                    Audit & Verification Summary
+                  </div>
 
-                <h3>Receipt Verification</h3>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "var(--space-4)",
+                      marginBottom: "var(--space-3)",
+                    }}
+                  >
+                    <div>
+                      <span className="data-label">OCR Scanned Amount</span>
+                      <span className="data-value">
+                        {expense.ocrExtractedAmount !== null &&
+                        expense.ocrExtractedAmount !== undefined
+                          ? `₹${expense.ocrExtractedAmount}`
+                          : "Not detected"}
+                      </span>
+                    </div>
 
-                <p>
-                  <strong>Submitted Amount:</strong>{" "}
-                  ₹{expense.amount}
-                </p>
+                    <div>
+                      <span className="data-label">OCR Amount Match</span>
+                      <span className="data-value">
+                        {hasOcrMismatch ? (
+                          <span style={{ color: "var(--danger)", fontWeight: "var(--font-weight-medium)" }}>
+                            ⚠️ Mismatch
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--success)", fontWeight: "var(--font-weight-medium)" }}>
+                            ✓ Match
+                          </span>
+                        )}
+                      </span>
+                    </div>
 
-                <p>
-                  <strong>OCR Amount:</strong>{" "}
-                  {expense.ocrExtractedAmount !==
-                    null &&
-                  expense.ocrExtractedAmount !==
-                    undefined
-                    ? `₹${expense.ocrExtractedAmount}`
-                    : "Not detected"}
-                </p>
+                    <div>
+                      <span className="data-label">Policy Status</span>
+                      <span className="data-value">
+                        {hasPolicyFlag ? (
+                          <span style={{ color: "var(--danger)", fontWeight: "var(--font-weight-medium)" }}>
+                            ⚠️ FLAGGED
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--success)", fontWeight: "var(--font-weight-medium)" }}>
+                            ✓ Within policy
+                          </span>
+                        )}
+                      </span>
+                    </div>
 
-                <p>
-                  <strong>Amount Match:</strong>{" "}
-                  {expense.ocrAmountMismatch
-                    ? "MISMATCH"
-                    : "MATCH"}
-                </p>
+                    {expense.policyMessage && (
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <span className="data-label">Policy Flag Note</span>
+                        <span className="data-value" style={{ color: "var(--text-secondary)" }}>
+                          {expense.policyMessage}
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
-                <p>
-                  <strong>Policy:</strong>{" "}
-                  {expense.policyFlag
-                    ? "FLAGGED"
-                    : "Within policy"}
-                </p>
-
-                {expense.policyMessage && (
-                  <p>
-                    {expense.policyMessage}
-                  </p>
-                )}
-
-                {expense.receiptUrl && (
-                  <p>
+                  {expense.receiptUrl && (
                     <a
                       href={expense.receiptUrl}
                       target="_blank"
                       rel="noreferrer"
+                      className="btn btn--secondary"
+                      style={{ display: "inline-flex" }}
                     >
-                      View Receipt
+                      View Receipt ↗
                     </a>
-                  </p>
-                )}
+                  )}
+                </div>
 
-                <button
-                  disabled={
-                    processingId === expense._id
-                  }
-                  onClick={() =>
-                    handleReimbursement(
-                      expense._id
-                    )
-                  }
+                {}
+                <div
+                  style={{
+                    marginTop: "var(--space-5)",
+                    paddingTop: "var(--space-4)",
+                    borderTop: "1px solid var(--border-light)",
+                  }}
                 >
-                  {processingId === expense._id
-                    ? "Processing..."
-                    : "Process Reimbursement"}
-                </button>
-              </article>
-            ))}
-          </section>
-        )}
-      </main>
-    </>
+                  <Button
+                    variant="primary"
+                    loading={processingId === expense._id}
+                    onClick={() => openProcessModal(expense)}
+                  >
+                    Process Reimbursement
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {}
+      <Modal
+        isOpen={confirmModalOpen}
+        onClose={() => setConfirmModalOpen(false)}
+        title="Confirm Reimbursement Payout"
+      >
+        <p style={{ marginBottom: "var(--space-3)", color: "var(--text-secondary)" }}>
+          You are about to disburse reimbursement of{" "}
+          <strong style={{ color: "var(--text)" }}>₹{selectedExpense?.amount}</strong> to{" "}
+          <strong style={{ color: "var(--text)" }}>
+            {selectedExpense?.employee?.name || "the employee"}
+          </strong>{" "}
+          ({selectedExpense?.category}).
+        </p>
+
+        <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", marginBottom: "var(--space-5)" }}>
+          A simulated transaction ID will be generated and saved to the audit ledger.
+        </p>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)" }}>
+          <Button
+            variant="ghost"
+            onClick={() => setConfirmModalOpen(false)}
+            disabled={processingId !== null}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            loading={processingId !== null}
+            onClick={handleConfirmReimbursement}
+          >
+            Confirm & Pay
+          </Button>
+        </div>
+      </Modal>
+    </AppLayout>
   );
 };
 

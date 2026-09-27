@@ -9,7 +9,7 @@ const processReimbursement = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const expense = await Expense.findById(id);
+    let expense = await Expense.findById(id);
 
     if (!expense) {
       return res.status(404).json({
@@ -18,7 +18,7 @@ const processReimbursement = async (req, res) => {
       });
     }
 
-    if (expense.status !== "APPROVED") {
+    if (!["APPROVED", "REIMBURSED"].includes(expense.status)) {
       return res.status(400).json({
         success: false,
         message:
@@ -26,43 +26,89 @@ const processReimbursement = async (req, res) => {
       });
     }
 
-    const existingReimbursement =
-      await Reimbursement.findOne({
-        expense: expense._id,
-      });
+    let reimbursement = await Reimbursement.findOne({
+      expense: expense._id,
+    });
 
-    if (existingReimbursement) {
-      return res.status(400).json({
+    if (expense.status === "REIMBURSED" && !reimbursement) {
+      return res.status(409).json({
         success: false,
-        message:
-          "Expense has already been reimbursed",
+        message: "Expense is reimbursed but its reimbursement record is missing",
       });
     }
 
-    const transactionId = generateTransactionId();
-
-    const reimbursement =
-      await Reimbursement.create({
-        expense: expense._id,
-        employee: expense.employee,
-        amount: expense.amount,
-        transactionId,
-        status: "COMPLETED",
-        processedBy: req.user.userId,
-        processedAt: new Date(),
+    if (reimbursement?.status === "FAILED") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "This reimbursement failed and needs reconciliation before retrying",
       });
+    }
 
-    expense.status = "REIMBURSED";
-    expense.reviewedBy = req.user.userId;
-    expense.reviewedAt = new Date();
+    if (!reimbursement) {
+      try {
+        // One record per expense acts as an idempotency key; retries resume PROCESSING records.
+        reimbursement = await Reimbursement.create({
+          expense: expense._id,
+          employee: expense.employee,
+          amount: expense.amount,
+          transactionId: generateTransactionId(),
+          status: "PROCESSING",
+          processedBy: req.user.userId,
+        });
+      } catch (createError) {
+        // A concurrent request may have created the unique expense record first.
+        if (createError.code !== 11000) throw createError;
+        reimbursement = await Reimbursement.findOne({
+          expense: expense._id,
+        });
+        if (!reimbursement) throw createError;
+      }
+    }
 
-    await expense.save();
+    const reviewedAt = new Date();
+    let updatedExpense = await Expense.findOneAndUpdate(
+      { _id: expense._id, status: "APPROVED" },
+      {
+        $set: {
+          status: "REIMBURSED",
+          reviewedBy: req.user.userId,
+          reviewedAt,
+        },
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedExpense) {
+      expense = await Expense.findById(id);
+      if (!expense) {
+        return res.status(404).json({
+          success: false,
+          message: "Expense not found",
+        });
+      }
+      if (expense.status !== "REIMBURSED") {
+        return res.status(409).json({
+          success: false,
+          message:
+            "Expense status changed before reimbursement could be completed",
+        });
+      }
+      updatedExpense = expense;
+    }
+
+    if (reimbursement.status !== "COMPLETED") {
+      reimbursement.status = "COMPLETED";
+      reimbursement.processedBy = req.user.userId;
+      reimbursement.processedAt = new Date();
+      await reimbursement.save();
+    }
 
     return res.status(200).json({
       success: true,
       message:
         "Reimbursement processed successfully",
-      expense,
+      expense: updatedExpense,
       reimbursement,
     });
   } catch (error) {

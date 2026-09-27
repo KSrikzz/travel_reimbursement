@@ -103,13 +103,19 @@ const createExpense = async (req, res) => {
             receiptUrl =
                 uploadResult.secure_url;
 
-            ocrText =
-                await extractTextFromImage(
-                    req.file.buffer
-                );
+            try {
+                ocrText =
+                    await extractTextFromImage(
+                        req.file.buffer
+                    );
 
-            ocrExtractedAmount =
-                extractTotalAmount(ocrText);
+                ocrExtractedAmount =
+                    extractTotalAmount(ocrText);
+            } catch (ocrError) {
+                console.error("OCR extraction warning:", ocrError.message);
+                ocrText = null;
+                ocrExtractedAmount = null;
+            }
         }
 
         // OCR amount mismatch
@@ -142,12 +148,12 @@ const createExpense = async (req, res) => {
     } catch (error) {
         console.error(
             "Create expense error:",
-            error.message
+            error
         );
 
         return res.status(500).json({
             success: false,
-            message: "Server error",
+            message: error.message || "Server error",
         });
     }
 };

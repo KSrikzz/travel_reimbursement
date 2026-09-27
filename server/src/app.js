@@ -39,4 +39,19 @@ app.use("/api/expenses",expenseRoutes);
 app.use("/api/reimbursements",reimbursementRoutes);
 app.use("/api/dashboard",dashboardRoutes);
 
+// Global error handling middleware
+app.use((err, req, res, next) => {
+    console.error("Unhandled error:", err);
+    if (err.name === "MulterError") {
+        return res.status(400).json({
+            success: false,
+            message: `Upload error: ${err.message}`,
+        });
+    }
+    return res.status(err.status || 500).json({
+        success: false,
+        message: err.message || "Internal server error",
+    });
+});
+
 module.exports = app;

@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
+import AppLayout from "../components/AppLayout";
+import PageHeader from "../components/PageHeader";
+import Card from "../components/Card";
+import Button from "../components/Button";
+import StatusBadge from "../components/StatusBadge";
+import FormField from "../components/FormField";
+import FileUpload from "../components/FileUpload";
+import Alert from "../components/Alert";
+import LoadingState from "../components/LoadingState";
+import EmptyState from "../components/EmptyState";
 
 import {
   getMyExpenses,
@@ -40,9 +49,9 @@ const Expenses = () => {
 
       setExpenses(expenseData.expenses || []);
       setTravelRequests(travelData.travelRequests || []);
-    } catch (error) {
+    } catch (err) {
       setError(
-        error.response?.data?.message ||
+        err.response?.data?.message ||
           "Failed to load expense data"
       );
     } finally {
@@ -185,12 +194,15 @@ const Expenses = () => {
 
       setReceipt(null);
 
-      document.getElementById("receipt").value = "";
+      const receiptInput = document.getElementById("receipt");
+      if (receiptInput) {
+        receiptInput.value = "";
+      }
 
       await loadData();
-    } catch (error) {
+    } catch (err) {
       setError(
-        error.response?.data?.message ||
+        err.response?.data?.message ||
           "Failed to create expense"
       );
     } finally {
@@ -199,253 +211,274 @@ const Expenses = () => {
   };
 
   if (loading) {
-    return <p>Loading expenses...</p>;
+    return (
+      <AppLayout>
+        <LoadingState message="Loading expenses..." />
+      </AppLayout>
+    );
   }
 
   return (
-    <>
-      <Navbar />
+    <AppLayout>
+      <PageHeader
+        title="My Expenses"
+        subtitle="Submit expense claims with receipt OCR verification and track status"
+      />
 
-      <main>
-        <h1>My Expenses</h1>
+      {error && (
+        <Alert
+          type="error"
+          onDismiss={() => setError("")}
+        >
+          {error}
+        </Alert>
+      )}
 
-        {error && (
-          <p style={{ color: "red" }}>
-            {error}
-          </p>
-        )}
+      {success && (
+        <Alert
+          type="success"
+          onDismiss={() => setSuccess("")}
+        >
+          {success}
+        </Alert>
+      )}
 
-        {success && (
-          <p style={{ color: "green" }}>
-            {success}
-          </p>
-        )}
+      {}
+      <Card className="form-card" style={{ marginBottom: "var(--space-8)" }}>
+        <h2 className="form-card__title">Submit New Expense</h2>
+        <p className="form-card__description">
+          Expenses must be linked to an approved travel request and include a readable receipt image.
+        </p>
 
-        <section>
-          <h2>Submit Expense</h2>
-
-          {approvedRequests.length === 0 ? (
-            <p>
-              You do not have any approved travel requests.
-              An approved travel request is required before
-              submitting an expense.
-            </p>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <div>
-                <label>
-                  Approved Travel Request
-                </label>
-
+        {approvedRequests.length === 0 ? (
+          <Alert type="warning">
+            You do not have any approved travel requests. An approved travel request is required before submitting an expense.
+          </Alert>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div className="form-grid">
+              <FormField
+                label="Approved Travel Request"
+                htmlFor="travelRequest"
+                hint="Only trips with APPROVED status are eligible"
+              >
                 <select
+                  id="travelRequest"
                   name="travelRequest"
                   value={form.travelRequest}
                   onChange={handleChange}
+                  required
                 >
-                  <option value="">
-                    Select travel request
-                  </option>
-
+                  <option value="">Select travel request</option>
                   {approvedRequests.map((request) => (
-                    <option
-                      key={request._id}
-                      value={request._id}
-                    >
-                      {request.destination} -{" "}
-                      {new Date(
-                        request.startDate
-                      ).toLocaleDateString()}
+                    <option key={request._id} value={request._id}>
+                      {request.destination} — {new Date(request.startDate).toLocaleDateString()}
                     </option>
                   ))}
                 </select>
-              </div>
+              </FormField>
 
-              <div>
-                <label>
-                  Expense Category
-                </label>
-
+              <FormField
+                label="Expense Category"
+                htmlFor="category"
+              >
                 <select
+                  id="category"
                   name="category"
                   value={form.category}
                   onChange={handleChange}
+                  required
                 >
-                  <option value="">
-                    Select category
-                  </option>
-
-                  <option value="HOTEL">
-                    Hotel
-                  </option>
-
-                  <option value="FOOD">
-                    Food
-                  </option>
-
-                  <option value="TRANSPORT">
-                    Transport
-                  </option>
-
-                  <option value="FLIGHT">
-                    Flight
-                  </option>
-
-                  <option value="OTHER">
-                    Other
-                  </option>
+                  <option value="">Select category</option>
+                  <option value="HOTEL">Hotel</option>
+                  <option value="FOOD">Food</option>
+                  <option value="TRANSPORT">Transport</option>
+                  <option value="FLIGHT">Flight</option>
+                  <option value="OTHER">Other</option>
                 </select>
-              </div>
+              </FormField>
 
-              <div>
-                <label>
-                  Amount
-                </label>
-
+              <FormField
+                label="Amount (₹)"
+                htmlFor="amount"
+              >
                 <input
+                  id="amount"
                   type="number"
                   name="amount"
                   value={form.amount}
                   onChange={handleChange}
                   min="0"
                   step="0.01"
-                  placeholder="Example: 1200"
+                  placeholder="e.g. 1200"
+                  required
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label>
-                  Expense Date
-                </label>
-
+              <FormField
+                label="Expense Date"
+                htmlFor="expenseDate"
+              >
                 <input
+                  id="expenseDate"
                   type="date"
                   name="expenseDate"
                   value={form.expenseDate}
                   onChange={handleChange}
+                  required
                 />
+              </FormField>
+
+              <div className="form-grid--full">
+                <FormField
+                  label="Description"
+                  htmlFor="description"
+                  hint="Provide brief context for this business expense"
+                >
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={form.description}
+                    onChange={handleChange}
+                    placeholder="Describe the purpose of this expense"
+                    rows={3}
+                  />
+                </FormField>
               </div>
 
-              <div>
-                <label>
-                  Description
-                </label>
-
-                <textarea
-                  name="description"
-                  value={form.description}
-                  onChange={handleChange}
-                  placeholder="Describe the expense"
-                />
+              <div className="form-grid--full">
+                <FormField
+                  label="Receipt Image"
+                  htmlFor="receipt"
+                  hint="JPG, JPEG or PNG up to 5MB. Clear receipts improve automatic OCR amount verification."
+                >
+                  <FileUpload
+                    id="receipt"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={handleReceiptChange}
+                    fileName={receipt ? receipt.name : ""}
+                    hint="Receipt will be automatically scanned by OCR upon submission"
+                  />
+                </FormField>
               </div>
+            </div>
 
-              <div>
-                <label>
-                  Receipt
-                </label>
-
-                <input
-                  id="receipt"
-                  type="file"
-                  accept=".jpg,.jpeg,.png"
-                  onChange={handleReceiptChange}
-                />
-
-                <p>
-                  JPG, JPEG or PNG. Maximum 5MB.
-                </p>
-              </div>
-
-              <button
+            <div style={{ marginTop: "var(--space-6)" }}>
+              <Button
                 type="submit"
-                disabled={submitting}
+                variant="primary"
+                loading={submitting}
               >
-                {submitting
-                  ? "Submitting..."
-                  : "Submit Expense"}
-              </button>
-            </form>
-          )}
-        </section>
+                {submitting ? "Submitting Expense..." : "Submit Expense"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Card>
 
-        <hr />
+      {}
+      <section className="dashboard-section">
+        <h2 className="dashboard-section__title">Expense History</h2>
 
-        <section>
-          <h2>Expense History</h2>
+        {expenses.length === 0 ? (
+          <EmptyState message="No expenses submitted yet. Once you submit an expense against an approved trip, it will appear here." />
+        ) : (
+          <div className="request-list">
+            {expenses.map((expense) => (
+              <Card key={expense._id}>
+                <div className="expense-card__header">
+                  <div>
+                    <span className="badge badge--neutral" style={{ marginRight: "var(--space-2)" }}>
+                      {expense.category}
+                    </span>
+                    <span className="expense-card__amount">₹{expense.amount}</span>
+                  </div>
+                  <StatusBadge status={expense.status} />
+                </div>
 
-          {expenses.length === 0 ? (
-            <p>No expenses submitted yet.</p>
-          ) : (
-            expenses.map((expense) => (
-              <article key={expense._id}>
-                <h3>
-                  {expense.category}
-                </h3>
+                <div className="expense-card__meta">
+                  <div>
+                    <span className="data-label">Expense Date</span>
+                    <span className="data-value">
+                      {new Date(expense.expenseDate).toLocaleDateString()}
+                    </span>
+                  </div>
 
-                <p>
-                  <strong>Amount:</strong>{" "}
-                  ₹{expense.amount}
-                </p>
+                  <div>
+                    <span className="data-label">Policy Status</span>
+                    <span className="data-value">
+                      {expense.policyFlag ? (
+                        <span style={{ color: "var(--danger)", fontWeight: "var(--font-weight-medium)" }}>
+                          ⚠️ Flagged
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--success)", fontWeight: "var(--font-weight-medium)" }}>
+                          ✓ Within policy
+                        </span>
+                      )}
+                    </span>
+                  </div>
 
-                <p>
-                  <strong>Date:</strong>{" "}
-                  {new Date(
-                    expense.expenseDate
-                  ).toLocaleDateString()}
-                </p>
-
-                <p>
-                  <strong>Status:</strong>{" "}
-                  {expense.status}
-                </p>
-
-                <p>
-                  <strong>Policy:</strong>{" "}
-                  {expense.policyFlag
-                    ? "Flagged"
-                    : "Within policy"}
-                </p>
-
-                {expense.policyMessage && (
-                  <p>
-                    <strong>Policy Message:</strong>{" "}
-                    {expense.policyMessage}
-                  </p>
-                )}
-
-                {expense.ocrExtractedAmount !== null &&
-                  expense.ocrExtractedAmount !== undefined && (
-                    <p>
-                      <strong>
-                        Receipt Amount:
-                      </strong>{" "}
-                      ₹{expense.ocrExtractedAmount}
-                    </p>
+                  {expense.description && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <span className="data-label">Description</span>
+                      <span className="data-value">{expense.description}</span>
+                    </div>
                   )}
 
-                {expense.ocrAmountMismatch && (
-                  <p style={{ color: "red" }}>
-                    Receipt amount does not match
-                    the submitted amount.
-                  </p>
-                )}
+                  {expense.policyMessage && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <div className="request-card__comment" style={{ borderColor: "var(--warning)" }}>
+                        <div className="request-card__comment-label" style={{ color: "var(--warning)" }}>
+                          Policy Note
+                        </div>
+                        <div>{expense.policyMessage}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-                {expense.receiptUrl && (
-                  <p>
-                    <a
-                      href={expense.receiptUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      View Receipt
-                    </a>
-                  </p>
-                )}
-              </article>
-            ))
-          )}
-        </section>
-      </main>
-    </>
+                {}
+                <div className="verification-section">
+                  <div className="verification-section__title">Verification & Receipt</div>
+                  
+                  <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                    {expense.ocrExtractedAmount !== null &&
+                      expense.ocrExtractedAmount !== undefined && (
+                        <div className="verification-item">
+                          <span className="data-label" style={{ minWidth: "8rem" }}>OCR Detected</span>
+                          <span className="data-value">₹{expense.ocrExtractedAmount}</span>
+                        </div>
+                      )}
+
+                    {expense.ocrAmountMismatch && (
+                      <div className="verification-item" style={{ color: "var(--danger)" }}>
+                        <span className="verification-item__icon">⚠️</span>
+                        <span>Receipt amount does not match the submitted amount.</span>
+                      </div>
+                    )}
+
+                    {expense.receiptUrl && (
+                      <div style={{ marginTop: "var(--space-2)" }}>
+                        <a
+                          href={expense.receiptUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn--secondary"
+                          style={{ display: "inline-flex" }}
+                        >
+                          View Receipt ↗
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+    </AppLayout>
   );
 };
 

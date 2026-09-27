@@ -1,12 +1,30 @@
 import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
-import { getPendingTravelRequests, updateTravelRequestStatus, } from "../api/managerTravelApi";
+import AppLayout from "../components/AppLayout";
+import {
+  getPendingTravelRequests,
+  updateTravelRequestStatus,
+} from "../api/managerTravelApi";
+import PageHeader from "../components/PageHeader";
+import Card from "../components/Card";
+import Button from "../components/Button";
+import StatusBadge from "../components/StatusBadge";
+import Alert from "../components/Alert";
+import LoadingState from "../components/LoadingState";
+import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
+import Modal from "../components/Modal";
+import FormField from "../components/FormField";
 
 const ManagerTravelRequests = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [processingId, setProcessingId] = useState(null);
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalAction, setModalAction] = useState(null);
+  const [comment, setComment] = useState("");
 
   const loadRequests = async () => {
     try {
@@ -30,29 +48,37 @@ const ManagerTravelRequests = () => {
     loadRequests();
   }, []);
 
-  const handleStatusUpdate = async (requestId, status) => {
-    const managerComment = window.prompt(
-      `Enter a comment for ${status}:`
-    );
+  const openModal = (requestId, status) => {
+    setModalAction({ requestId, status });
+    setComment("");
+    setModalOpen(true);
+  };
 
-    if (managerComment === null) {
-      return;
-    }
+  const handleConfirm = async () => {
+    if (!modalAction) return;
+
+    const { requestId, status } = modalAction;
 
     try {
       setProcessingId(requestId);
       setError("");
+      setSuccessMsg("");
+      setModalOpen(false);
 
       await updateTravelRequestStatus(
         requestId,
         status,
-        managerComment
+        comment
       );
 
       setRequests((previousRequests) =>
         previousRequests.filter(
           (request) => request._id !== requestId
         )
+      );
+
+      setSuccessMsg(
+        `Travel request ${status.toLowerCase()} successfully.`
       );
     } catch (error) {
       setError(
@@ -61,105 +87,146 @@ const ManagerTravelRequests = () => {
       );
     } finally {
       setProcessingId(null);
+      setModalAction(null);
     }
   };
 
+  if (loading) {
+    return (
+      <AppLayout>
+        <PageHeader title="Travel Request Review" />
+        <LoadingState message="Loading pending requests..." />
+      </AppLayout>
+    );
+  }
+
   return (
-    <>
-      <Navbar />
+    <AppLayout>
+      <PageHeader
+        title="Travel Request Review"
+        subtitle="Approve or reject employee travel requests. Add a comment to provide feedback."
+      />
 
-      <main>
-        <h1>Pending Travel Requests</h1>
+      {error && (
+        <Alert type="error" onDismiss={() => setError("")}>
+          {error}
+        </Alert>
+      )}
+      {successMsg && (
+        <Alert type="success" onDismiss={() => setSuccessMsg("")}>
+          {successMsg}
+        </Alert>
+      )}
 
-        {error && (
-          <p style={{ color: "red" }}>
-            {error}
-          </p>
-        )}
+      {requests.length === 0 ? (
+        <EmptyState
+          message="No pending travel requests to review. All caught up!"
+        />
+      ) : (
+        <div className="request-list">
+          {requests.map((request) => (
+            <Card key={request._id}>
+              <div className="request-card__header">
+                <h2 className="request-card__title">
+                  {request.destination}
+                </h2>
+                <StatusBadge status={request.status} />
+              </div>
 
-        {loading ? (
-          <p>Loading requests...</p>
-        ) : requests.length === 0 ? (
-          <p>No pending travel requests.</p>
-        ) : (
-          <section>
-            {requests.map((request) => (
-              <article key={request._id}>
-                <h2>{request.destination}</h2>
+              <div className="request-card__details">
+                <div className="data-row">
+                  <span className="data-row__label">Employee</span>
+                  <span className="data-row__value">{request.employee?.name}</span>
+                </div>
+                <div className="data-row">
+                  <span className="data-row__label">Email</span>
+                  <span className="data-row__value">{request.employee?.email}</span>
+                </div>
+                <div className="data-row">
+                  <span className="data-row__label">Department</span>
+                  <span className="data-row__value">{request.employee?.department}</span>
+                </div>
+                <div className="data-row">
+                  <span className="data-row__label">Purpose</span>
+                  <span className="data-row__value">{request.purpose}</span>
+                </div>
+                <div className="data-row">
+                  <span className="data-row__label">Start Date</span>
+                  <span className="data-row__value">
+                    {new Date(request.startDate).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="data-row">
+                  <span className="data-row__label">End Date</span>
+                  <span className="data-row__value">
+                    {new Date(request.endDate).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="data-row">
+                  <span className="data-row__label">Budget</span>
+                  <span className="data-row__value">₹{request.estimatedBudget}</span>
+                </div>
+              </div>
 
-                <p>
-                  <strong>Employee:</strong>{" "}
-                  {request.employee?.name}
-                </p>
-
-                <p>
-                  <strong>Email:</strong>{" "}
-                  {request.employee?.email}
-                </p>
-
-                <p>
-                  <strong>Department:</strong>{" "}
-                  {request.employee?.department}
-                </p>
-
-                <p>
-                  <strong>Purpose:</strong>{" "}
-                  {request.purpose}
-                </p>
-
-                <p>
-                  <strong>Start Date:</strong>{" "}
-                  {new Date(
-                    request.startDate
-                  ).toLocaleDateString()}
-                </p>
-
-                <p>
-                  <strong>End Date:</strong>{" "}
-                  {new Date(
-                    request.endDate
-                  ).toLocaleDateString()}
-                </p>
-
-                <p>
-                  <strong>Estimated Budget:</strong>{" "}
-                  ₹{request.estimatedBudget}
-                </p>
-
-                <p>
-                  <strong>Status:</strong>{" "}
-                  {request.status}
-                </p>
-
-                <button
+              <div className="action-bar" style={{ marginTop: "var(--space-4)" }}>
+                <Button
+                  variant="primary"
                   disabled={processingId === request._id}
-                  onClick={() =>
-                    handleStatusUpdate(
-                      request._id,
-                      "APPROVED"
-                    )
-                  }
+                  loading={processingId === request._id}
+                  onClick={() => openModal(request._id, "APPROVED")}
                 >
                   Approve
-                </button>
-
-                <button
+                </Button>
+                <Button
+                  variant="danger"
                   disabled={processingId === request._id}
-                  onClick={() =>
-                    handleStatusUpdate(
-                      request._id,
-                      "REJECTED"
-                    )
-                  }
+                  onClick={() => openModal(request._id, "REJECTED")}
                 >
                   Reject
-                </button>
-              </article>
-            ))}
-          </section>
-        )}
-      </main>
-    </>
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {}
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={
+          modalAction?.status === "APPROVED"
+            ? "Approve Travel Request"
+            : "Reject Travel Request"
+        }
+      >
+        <div className="modal__body">
+          <FormField
+            label="Comment (optional)"
+            htmlFor="manager-comment"
+          >
+            <textarea
+              id="manager-comment"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Add a comment for the employee..."
+              rows={3}
+            />
+          </FormField>
+        </div>
+        <div className="modal__footer">
+          <Button variant="secondary" onClick={() => setModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant={modalAction?.status === "APPROVED" ? "primary" : "danger"}
+            onClick={handleConfirm}
+          >
+            {modalAction?.status === "APPROVED" ? "Approve" : "Reject"}
+          </Button>
+        </div>
+      </Modal>
+    </AppLayout>
   );
 };
 
