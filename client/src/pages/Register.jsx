@@ -104,14 +104,18 @@ const Register = () => {
           </FormField>
 
           <FormField label="Department" htmlFor="register-department">
-            <input
+            <select
               id="register-department"
               name="department"
               value={formData.department}
               onChange={handleChange}
-              placeholder="e.g. Engineering, Sales, HR"
               required
-            />
+            >
+              <option value="">Select your department</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Sales">Sales</option>
+              <option value="Marketing">Marketing</option>
+            </select>
           </FormField>
 
           <Button

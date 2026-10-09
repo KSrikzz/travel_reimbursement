@@ -95,6 +95,46 @@ const Login = () => {
           </Button>
         </form>
 
+        <div style={{ marginTop: "var(--space-5)", paddingTop: "var(--space-4)", borderTop: "1px solid var(--border-light)" }}>
+          <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", marginBottom: "var(--space-2)", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: "var(--font-weight-semibold)" }}>
+            Quick Demo Fill
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "var(--space-2)" }}>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              style={{ padding: "var(--space-1) var(--space-2)", fontSize: "var(--font-size-xs)", minHeight: "2.25rem" }}
+              onClick={() => setFormData({ email: "employee@demo.com", password: "employee123" })}
+            >
+              Employee (Engineering)
+            </button>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              style={{ padding: "var(--space-1) var(--space-2)", fontSize: "var(--font-size-xs)", minHeight: "2.25rem" }}
+              onClick={() => setFormData({ email: "manager@demo.com", password: "manager123" })}
+            >
+              Manager (Engineering)
+            </button>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              style={{ padding: "var(--space-1) var(--space-2)", fontSize: "var(--font-size-xs)", minHeight: "2.25rem" }}
+              onClick={() => setFormData({ email: "sales.manager@demo.com", password: "manager123" })}
+            >
+              Manager (Sales)
+            </button>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              style={{ padding: "var(--space-1) var(--space-2)", fontSize: "var(--font-size-xs)", minHeight: "2.25rem" }}
+              onClick={() => setFormData({ email: "finance@demo.com", password: "finance123" })}
+            >
+              Finance
+            </button>
+          </div>
+        </div>
+
         <p className="auth-footer">
           Don't have an account?{" "}
           <Link to="/register">Create one</Link>

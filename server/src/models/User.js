@@ -31,6 +31,7 @@ const userSchema = new mongoose.Schema(
         department: {
             type: String,
             required: true,
+            enum: ["Engineering", "Sales", "Marketing", "Finance"],
             trim: true,
         },
     },

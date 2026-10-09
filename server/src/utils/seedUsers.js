@@ -19,11 +19,18 @@ const seedUsers = async () => {
                 department: "Engineering",
             },
             {
-                name: "Demo Manager",
+                name: "Demo Engineering Manager",
                 email: "manager@demo.com",
                 password: "manager123",
                 role: "MANAGER",
                 department: "Engineering",
+            },
+            {
+                name: "Demo Sales Manager",
+                email: "sales.manager@demo.com",
+                password: "manager123",
+                role: "MANAGER",
+                department: "Sales",
             },
             {
                 name: "Demo Finance",
@@ -40,8 +47,11 @@ const seedUsers = async () => {
             });
 
             if (existingUser) {
+                existingUser.department = userData.department;
+                existingUser.role = userData.role;
+                await existingUser.save();
                 console.log(
-                    `${userData.email} already exists`
+                    `Updated ${userData.email} (${userData.role} in ${userData.department})`
                 );
                 continue;
             }
