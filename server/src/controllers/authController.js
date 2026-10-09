@@ -4,13 +4,21 @@ const User = require("../models/User");
 
 const register = async (req, res) => {
     try {
-        const { name, email, password, role, department } = req.body;
+        const { name, email, password, department } = req.body;
 
         // Validate required fields
         if (!name || !email || !password || !department) {
             return res.status(400).json({
                 success: false,
                 message: "All required fields must be provided",
+            });
+        }
+
+        const allowedDepartments = ["Engineering", "Sales", "Marketing", "Finance"];
+        if (!allowedDepartments.includes(department)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid department. Please select from: ${allowedDepartments.join(", ")}`,
             });
         }
 
@@ -95,6 +103,7 @@ const login = async (req, res) => {
             {
                 userId: user._id,
                 role: user.role,
+                department: user.department,
             },
             process.env.JWT_SECRET,
             {
