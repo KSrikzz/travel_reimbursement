@@ -8,41 +8,67 @@ const extractTotalAmount = (text) => {
         .map((line) => line.trim())
         .filter(Boolean);
 
-    const totalKeywords = [
+    const priorityKeywords = [
         "grand total",
         "total amount",
-        "amount due",
         "net amount",
-        "total",
+        "amount due",
+        "final total",
     ];
+
+    const fallbackKeywords = [
+        "total",
+        "subtotal",
+        "sub total",
+    ];
+
+    const ignoreKeywords = [
+        "total items",
+        "items total",
+        "item total",
+        "total qty",
+        "qty total",
+        "total savings",
+        "total tax",
+        "discount",
+    ];
+
+    let fallbackAmount = null;
 
     for (const line of lines) {
         const lowerLine = line.toLowerCase();
 
-        const containsTotalKeyword = totalKeywords.some(
-            (keyword) => lowerLine.includes(keyword)
-        );
-
-        if (!containsTotalKeyword) {
+        // Skip non-financial total lines
+        if (ignoreKeywords.some((ign) => lowerLine.includes(ign))) {
             continue;
         }
 
-        const matches = line.match(
-            /(?:₹|rs\.?|inr)?\s*(\d+(?:[.,]\d{1,2})?)/i
-        );
+        const isPriority = priorityKeywords.some((kw) => lowerLine.includes(kw));
+        const isFallback = fallbackKeywords.some((kw) => lowerLine.includes(kw));
 
-        if (matches) {
-            const amount = parseFloat(
-                matches[1].replace(",", "")
-            );
+        if (!isPriority && !isFallback) {
+            continue;
+        }
 
-            if (!Number.isNaN(amount)) {
-                return amount;
+        // Look for currency amounts, e.g. 1,349.00 or 1349.00 or 1349
+        const amounts = [...line.matchAll(/(?:₹|rs\.?|inr)?\s*(\d+(?:,\d+)*(?:\.\d{1,2})?)/gi)];
+        if (amounts.length > 0) {
+            // Pick the last number on the total line as it typically represents the column total
+            const lastMatch = amounts[amounts.length - 1];
+            const parsed = parseFloat(lastMatch[1].replace(/,/g, ""));
+
+            if (!Number.isNaN(parsed) && parsed > 0) {
+                if (isPriority) {
+                    return parsed;
+                }
+                if (fallbackAmount === null) {
+                    fallbackAmount = parsed;
+                }
             }
         }
     }
 
-    return null;
+    return fallbackAmount;
 };
 
 module.exports = {
