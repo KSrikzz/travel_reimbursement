@@ -13,6 +13,7 @@ import EmptyState from "../components/EmptyState";
 import {
   getMyExpenses,
   createExpense,
+  cancelExpense,
 } from "../api/expenseApi";
 
 import { getMyTravelRequests } from "../api/travelRequestApi";
@@ -66,6 +67,29 @@ const Expenses = () => {
   const approvedRequests = travelRequests.filter(
     (request) => request.status === "APPROVED"
   );
+
+  const selectedTrip = approvedRequests.find(
+    (r) => r._id === form.travelRequest
+  );
+
+  const handleCancelExpense = async (expenseId) => {
+    if (!window.confirm("Are you sure you want to cancel this pending expense claim?")) {
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccess("");
+      await cancelExpense(expenseId);
+      setSuccess("Expense claim cancelled successfully.");
+      await loadData();
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "Failed to cancel expense claim"
+      );
+    }
+  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -136,6 +160,21 @@ const Expenses = () => {
     if (!form.expenseDate) {
       setError("Please select the expense date.");
       return;
+    }
+
+    if (selectedTrip) {
+      const expDate = new Date(form.expenseDate);
+      const tripStart = new Date(selectedTrip.startDate);
+      tripStart.setUTCHours(0, 0, 0, 0);
+      const tripEnd = new Date(selectedTrip.endDate);
+      tripEnd.setUTCHours(23, 59, 59, 999);
+
+      if (expDate < tripStart || expDate > tripEnd) {
+        setError(
+          `Expense date must fall between trip dates (${new Date(selectedTrip.startDate).toLocaleDateString()} to ${new Date(selectedTrip.endDate).toLocaleDateString()}).`
+        );
+        return;
+      }
     }
 
     if (!receipt) {
@@ -276,6 +315,11 @@ const Expenses = () => {
                     </option>
                   ))}
                 </select>
+                {selectedTrip && (
+                  <div style={{ marginTop: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--text-secondary)" }}>
+                    📅 <strong>Trip Window:</strong> {new Date(selectedTrip.startDate).toLocaleDateString()} to {new Date(selectedTrip.endDate).toLocaleDateString()} &nbsp;|&nbsp; 💰 <strong>Approved Budget:</strong> ₹{selectedTrip.estimatedBudget}
+                  </div>
+                )}
               </FormField>
 
               <FormField
@@ -436,6 +480,28 @@ const Expenses = () => {
                       </div>
                     </div>
                   )}
+
+                  {expense.managerComment && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <div className="request-card__comment" style={{ borderColor: expense.status === "REJECTED" ? "var(--danger)" : "var(--border)" }}>
+                        <div className="request-card__comment-label" style={{ color: expense.status === "REJECTED" ? "var(--danger)" : "var(--text-secondary)" }}>
+                          Manager Review Note
+                        </div>
+                        <div>{expense.managerComment}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {expense.financeComment && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <div className="request-card__comment" style={{ borderColor: "var(--danger)" }}>
+                        <div className="request-card__comment-label" style={{ color: "var(--danger)" }}>
+                          Finance Rejection Note
+                        </div>
+                        <div>{expense.financeComment}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {}
@@ -473,6 +539,18 @@ const Expenses = () => {
                     )}
                   </div>
                 </div>
+
+                {expense.status === "PENDING" && (
+                  <div style={{ marginTop: "var(--space-4)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--border-light)" }}>
+                    <Button
+                      variant="ghost"
+                      style={{ color: "var(--danger)", padding: "0.25rem 0.75rem", fontSize: "var(--font-size-sm)" }}
+                      onClick={() => handleCancelExpense(expense._id)}
+                    >
+                      Cancel Claim
+                    </Button>
+                  </div>
+                )}
               </Card>
             ))}
           </div>

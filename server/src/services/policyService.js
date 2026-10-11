@@ -1,5 +1,7 @@
+const mongoose = require("mongoose");
 const Policy = require("../models/Policy");
 const Expense = require("../models/Expense");
+const TravelRequest = require("../models/TravelRequest");
 
 const checkExpensePolicy = async (
     employee,
@@ -22,16 +24,20 @@ const checkExpensePolicy = async (
     }
 
     const startOfDay = new Date(expenseDate);
-    startOfDay.setHours(0, 0, 0, 0);
+    startOfDay.setUTCHours(0, 0, 0, 0);
 
     const endOfDay = new Date(expenseDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    const employeeId = mongoose.Types.ObjectId.isValid(employee)
+        ? new mongoose.Types.ObjectId(employee)
+        : employee;
 
     const existingExpenses =
         await Expense.aggregate([
             {
                 $match: {
-                    employee,
+                    employee: employeeId,
                     category,
                     expenseDate: {
                         $gte: startOfDay,
@@ -66,7 +72,7 @@ const checkExpensePolicy = async (
     return {
         policyFlag: exceedsLimit,
         policyMessage: exceedsLimit
-            ? `Daily ${category} limit exceeded. Limit: ₹${policy.dailyLimit}, Total: ₹${totalDailyAmount}`
+            ? `Daily ${category} limit exceeded. Limit: ₹${policy.dailyLimit}, Daily Total: ₹${totalDailyAmount}`
             : `Expense is within the ${category} daily limit of ₹${policy.dailyLimit}`,
         policy,
         existingAmount,
@@ -74,6 +80,48 @@ const checkExpensePolicy = async (
     };
 };
 
+const checkTripBudget = async (travelRequestId, newAmount) => {
+    const travelRequest = await TravelRequest.findById(travelRequestId);
+    if (!travelRequest) {
+        return { budgetExceeded: false, travelRequest: null };
+    }
+
+    const trId = mongoose.Types.ObjectId.isValid(travelRequestId)
+        ? new mongoose.Types.ObjectId(travelRequestId)
+        : travelRequestId;
+
+    const existingExpenses = await Expense.aggregate([
+        {
+            $match: {
+                travelRequest: trId,
+                status: { $ne: "REJECTED" },
+            },
+        },
+        {
+            $group: {
+                _id: null,
+                totalSpent: { $sum: "$amount" },
+            },
+        },
+    ]);
+
+    const currentSpent =
+        existingExpenses.length > 0 ? existingExpenses[0].totalSpent : 0;
+    const totalProjected = currentSpent + newAmount;
+    const budgetExceeded = totalProjected > travelRequest.estimatedBudget;
+
+    return {
+        budgetExceeded,
+        estimatedBudget: travelRequest.estimatedBudget,
+        currentSpent,
+        totalProjected,
+        budgetMessage: budgetExceeded
+            ? `Trip budget exceeded! Approved budget: ₹${travelRequest.estimatedBudget}, Total claims with this: ₹${totalProjected}`
+            : `Within trip budget (Spent: ₹${totalProjected} of ₹${travelRequest.estimatedBudget})`,
+    };
+};
+
 module.exports = {
     checkExpensePolicy,
+    checkTripBudget,
 };
