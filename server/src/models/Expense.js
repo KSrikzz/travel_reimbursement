@@ -87,6 +87,23 @@ const expenseSchema = new mongoose.Schema(
         reviewedAt: {
             type: Date,
         },
+
+        managerComment: {
+            type: String,
+            trim: true,
+            maxlength: 500,
+        },
+
+        financeComment: {
+            type: String,
+            trim: true,
+            maxlength: 500,
+        },
+
+        receiptHash: {
+            type: String,
+            trim: true,
+        },
     },
     {
         timestamps: true,

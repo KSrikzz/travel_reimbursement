@@ -7,6 +7,8 @@ const {
     getPendingExpenses,
     updateExpenseStatus,
     getApprovedExpenses,
+    financeRejectExpense,
+    cancelExpense,
 } = require("../controllers/expenseController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -30,10 +32,11 @@ const uploadReceipt = (req, res, next) => {
     });
 };
 
+// Employees & Travelers
 router.post(
     "/",
     protect,
-    authorize("EMPLOYEE"),
+    authorize("EMPLOYEE", "MANAGER", "FINANCE"),
     uploadReceipt,
     createExpense
 );
@@ -41,10 +44,18 @@ router.post(
 router.get(
     "/my",
     protect,
-    authorize("EMPLOYEE"),
+    authorize("EMPLOYEE", "MANAGER", "FINANCE"),
     getMyExpenses
 );
 
+router.delete(
+    "/:id",
+    protect,
+    authorize("EMPLOYEE", "MANAGER", "FINANCE"),
+    cancelExpense
+);
+
+// Manager review
 router.get(
     "/pending",
     protect,
@@ -59,11 +70,19 @@ router.patch(
     updateExpenseStatus
 );
 
+// Finance review & rejection
 router.get(
     "/approved",
     protect,
     authorize("FINANCE"),
     getApprovedExpenses
+);
+
+router.patch(
+    "/:id/finance-reject",
+    protect,
+    authorize("FINANCE"),
+    financeRejectExpense
 );
 
 module.exports = router;

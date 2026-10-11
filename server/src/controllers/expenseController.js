@@ -1,7 +1,9 @@
+const crypto = require("crypto");
 const Expense = require("../models/Expense");
 const TravelRequest = require("../models/TravelRequest");
 const {
     checkExpensePolicy,
+    checkTripBudget,
 } = require("../services/policyService");
 const {
     uploadToCloudinary,
@@ -9,7 +11,6 @@ const {
 const {
     extractTextFromImage,
 } = require("../services/ocrService");
-
 const {
     extractTotalAmount,
 } = require("../services/receiptParser");
@@ -37,10 +38,11 @@ const createExpense = async (req, res) => {
             });
         }
 
-        if (Number(amount) <= 0) {
+        const parsedAmount = Number(amount);
+        if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
             return res.status(400).json({
                 success: false,
-                message: "Amount must be greater than 0",
+                message: "Amount must be a valid number greater than 0",
             });
         }
 
@@ -74,20 +76,74 @@ const createExpense = async (req, res) => {
             });
         }
 
-        // Policy check
-        const policyResult =
-            await checkExpensePolicy(
-                req.user.userId,
-                category,
-                Number(amount),
-                expenseDate
-            );
+        // Validate expenseDate is within trip dates
+        const expDate = new Date(expenseDate);
+        if (Number.isNaN(expDate.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid expense date",
+            });
+        }
 
-        // Extract policy result
-        const {
-            policyFlag,
-            policyMessage,
-        } = policyResult;
+        const tripStart = new Date(request.startDate);
+        tripStart.setUTCHours(0, 0, 0, 0);
+        const tripEnd = new Date(request.endDate);
+        tripEnd.setUTCHours(23, 59, 59, 999);
+
+        if (expDate < tripStart || expDate > tripEnd) {
+            return res.status(400).json({
+                success: false,
+                message: `Expense date must be within trip dates (${new Date(request.startDate).toLocaleDateString()} to ${new Date(request.endDate).toLocaleDateString()})`,
+            });
+        }
+
+        // Check duplicate receipt hash
+        let receiptHash = null;
+        if (req.file) {
+            receiptHash = crypto
+                .createHash("sha256")
+                .update(req.file.buffer)
+                .digest("hex");
+
+            const duplicateReceipt = await Expense.findOne({
+                receiptHash,
+                status: { $ne: "REJECTED" },
+            });
+
+            if (duplicateReceipt) {
+                return res.status(400).json({
+                    success: false,
+                    message: "This receipt has already been submitted for another active expense claim.",
+                });
+            }
+        }
+
+        // Daily policy limit check
+        const policyResult = await checkExpensePolicy(
+            req.user.userId,
+            category,
+            parsedAmount,
+            expenseDate
+        );
+
+        // Trip total budget check
+        const budgetResult = await checkTripBudget(
+            travelRequest,
+            parsedAmount
+        );
+
+        let policyFlag = policyResult.policyFlag || budgetResult.budgetExceeded;
+        let policyMessages = [];
+        if (policyResult.policyFlag) {
+            policyMessages.push(policyResult.policyMessage);
+        }
+        if (budgetResult.budgetExceeded) {
+            policyMessages.push(budgetResult.budgetMessage);
+        }
+        if (policyMessages.length === 0) {
+            policyMessages.push(policyResult.policyMessage);
+        }
+        const policyMessage = policyMessages.join(" | ");
 
         // Receipt upload + OCR
         let receiptUrl;
@@ -95,22 +151,18 @@ const createExpense = async (req, res) => {
         let ocrExtractedAmount;
 
         if (req.file) {
-            const uploadResult =
-                await uploadToCloudinary(
+            const uploadResult = await uploadToCloudinary(
+                req.file.buffer
+            );
+
+            receiptUrl = uploadResult.secure_url;
+
+            try {
+                ocrText = await extractTextFromImage(
                     req.file.buffer
                 );
 
-            receiptUrl =
-                uploadResult.secure_url;
-
-            try {
-                ocrText =
-                    await extractTextFromImage(
-                        req.file.buffer
-                    );
-
-                ocrExtractedAmount =
-                    extractTotalAmount(ocrText);
+                ocrExtractedAmount = extractTotalAmount(ocrText);
             } catch (ocrError) {
                 console.error("OCR extraction warning:", ocrError.message);
                 ocrText = null;
@@ -118,20 +170,21 @@ const createExpense = async (req, res) => {
             }
         }
 
-        // OCR amount mismatch
+        // OCR amount mismatch check
         const ocrAmountMismatch =
             ocrExtractedAmount !== null &&
-            Number(amount) !==
-                ocrExtractedAmount;
+            ocrExtractedAmount !== undefined &&
+            parsedAmount !== ocrExtractedAmount;
 
         const expense = await Expense.create({
             employee: req.user.userId,
             travelRequest,
             category,
-            amount: Number(amount),
-            expenseDate,
+            amount: parsedAmount,
+            expenseDate: expDate,
             description,
             receiptUrl,
+            receiptHash,
             ocrText,
             ocrExtractedAmount,
             ocrAmountMismatch,
@@ -146,10 +199,7 @@ const createExpense = async (req, res) => {
             expense,
         });
     } catch (error) {
-        console.error(
-            "Create expense error:",
-            error
-        );
+        console.error("Create expense error:", error);
 
         return res.status(500).json({
             success: false,
@@ -165,7 +215,7 @@ const getMyExpenses = async (req, res) => {
         })
             .populate(
                 "travelRequest",
-                "destination startDate endDate status"
+                "destination startDate endDate status estimatedBudget"
             )
             .sort({ createdAt: -1 });
 
@@ -183,6 +233,7 @@ const getMyExpenses = async (req, res) => {
         });
     }
 };
+
 const getPendingExpenses = async (req, res) => {
     try {
         const expenses = await Expense.find({
@@ -194,14 +245,20 @@ const getPendingExpenses = async (req, res) => {
             )
             .populate(
                 "travelRequest",
-                "destination purpose"
+                "destination purpose startDate endDate estimatedBudget"
             )
             .sort({ createdAt: -1 });
 
+        const filtered = req.user.department
+            ? expenses.filter(
+                  (e) => e.employee && e.employee.department === req.user.department
+              )
+            : expenses;
+
         res.status(200).json({
             success: true,
-            count: expenses.length,
-            expenses,
+            count: filtered.length,
+            expenses: filtered,
         });
     } catch (error) {
         console.error("Get pending expenses error:", error);
@@ -212,44 +269,42 @@ const getPendingExpenses = async (req, res) => {
         });
     }
 };
+
 const getApprovedExpenses = async (req, res) => {
-  try {
-    const expenses = await Expense.find({
-      status: "APPROVED",
-    })
-      .populate("employee", "name email department")
-      .populate(
-        "travelRequest",
-        "destination purpose startDate endDate"
-      )
-      .sort({ createdAt: -1 });
+    try {
+        const expenses = await Expense.find({
+            status: "APPROVED",
+        })
+            .populate("employee", "name email department")
+            .populate(
+                "travelRequest",
+                "destination purpose startDate endDate estimatedBudget"
+            )
+            .sort({ createdAt: -1 });
 
-    return res.status(200).json({
-      success: true,
-      expenses,
-    });
-  } catch (error) {
-    console.error(
-      "Get approved expenses error:",
-      error
-    );
+        return res.status(200).json({
+            success: true,
+            expenses,
+        });
+    } catch (error) {
+        console.error("Get approved expenses error:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch approved expenses",
-    });
-  }
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch approved expenses",
+        });
+    }
 };
+
 const updateExpenseStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
+        const { status, managerComment } = req.body;
 
         if (!["APPROVED", "REJECTED"].includes(status)) {
             return res.status(400).json({
                 success: false,
-                message:
-                    "Status must be APPROVED or REJECTED",
+                message: "Status must be APPROVED or REJECTED",
             });
         }
 
@@ -265,12 +320,26 @@ const updateExpenseStatus = async (req, res) => {
         if (expense.status !== "PENDING") {
             return res.status(400).json({
                 success: false,
-                message:
-                    "Only pending expenses can be reviewed",
+                message: "Only pending expenses can be reviewed",
+            });
+        }
+
+        if (expense.employee.toString() === req.user.userId) {
+            return res.status(403).json({
+                success: false,
+                message: "You cannot review or approve your own expense claims",
+            });
+        }
+
+        if (status === "REJECTED" && !managerComment) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide a reason for rejecting the expense claim",
             });
         }
 
         expense.status = status;
+        expense.managerComment = managerComment || "";
         expense.reviewedBy = req.user.userId;
         expense.reviewedAt = new Date();
 
@@ -290,10 +359,100 @@ const updateExpenseStatus = async (req, res) => {
         });
     }
 };
+
+const financeRejectExpense = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { financeComment } = req.body;
+
+        if (!financeComment) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide a reason for returning or rejecting this reimbursement",
+            });
+        }
+
+        const expense = await Expense.findById(id);
+        if (!expense) {
+            return res.status(404).json({
+                success: false,
+                message: "Expense not found",
+            });
+        }
+
+        if (expense.status !== "APPROVED") {
+            return res.status(400).json({
+                success: false,
+                message: "Only manager-approved expenses awaiting payout can be rejected by Finance",
+            });
+        }
+
+        expense.status = "REJECTED";
+        expense.financeComment = financeComment;
+        expense.reviewedBy = req.user.userId;
+        expense.reviewedAt = new Date();
+
+        await expense.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Expense rejected and removed from payout queue",
+            expense,
+        });
+    } catch (error) {
+        console.error("Finance reject expense error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to reject expense",
+        });
+    }
+};
+
+const cancelExpense = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const expense = await Expense.findOne({
+            _id: id,
+            employee: req.user.userId,
+        });
+
+        if (!expense) {
+            return res.status(404).json({
+                success: false,
+                message: "Expense not found",
+            });
+        }
+
+        if (expense.status !== "PENDING") {
+            return res.status(400).json({
+                success: false,
+                message: "Only pending expenses can be cancelled",
+            });
+        }
+
+        await Expense.findByIdAndDelete(id);
+
+        return res.status(200).json({
+            success: true,
+            message: "Expense claim cancelled successfully",
+        });
+    } catch (error) {
+        console.error("Cancel expense error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
 module.exports = {
     createExpense,
     getMyExpenses,
     getPendingExpenses,
     updateExpenseStatus,
     getApprovedExpenses,
+    financeRejectExpense,
+    cancelExpense,
 };

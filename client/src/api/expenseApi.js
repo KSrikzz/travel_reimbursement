@@ -15,6 +15,10 @@ export const createExpense = async (expenseData) => {
       },
     }
   );
+  return response.data;
+};
 
+export const cancelExpense = async (expenseId) => {
+  const response = await api.delete(`/expenses/${expenseId}`);
   return response.data;
 };
