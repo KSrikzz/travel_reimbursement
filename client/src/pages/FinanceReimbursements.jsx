@@ -11,6 +11,7 @@ import Modal from "../components/Modal";
 import {
   getApprovedExpenses,
   processReimbursement,
+  financeRejectExpense,
 } from "../api/reimbursementApi";
 
 const FinanceReimbursements = () => {
@@ -21,7 +22,9 @@ const FinanceReimbursements = () => {
   const [success, setSuccess] = useState("");
 
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
+  const [financeComment, setFinanceComment] = useState("");
 
   const loadExpenses = async () => {
     try {
@@ -48,6 +51,45 @@ const FinanceReimbursements = () => {
   const openProcessModal = (expense) => {
     setSelectedExpense(expense);
     setConfirmModalOpen(true);
+  };
+
+  const openRejectModal = (expense) => {
+    setSelectedExpense(expense);
+    setFinanceComment("");
+    setRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!selectedExpense) return;
+    if (!financeComment.trim()) {
+      setError("Please provide a reason for rejecting or returning this expense claim.");
+      return;
+    }
+    const expenseId = selectedExpense._id;
+
+    try {
+      setProcessingId(expenseId);
+      setError("");
+      setSuccess("");
+
+      await financeRejectExpense(expenseId, financeComment.trim());
+
+      setSuccess("Expense claim rejected and removed from reimbursement queue.");
+      setExpenses((previousExpenses) =>
+        previousExpenses.filter((e) => e._id !== expenseId)
+      );
+
+      setRejectModalOpen(false);
+      setSelectedExpense(null);
+      setFinanceComment("");
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "Failed to reject expense"
+      );
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const handleConfirmReimbursement = async () => {
@@ -274,6 +316,8 @@ const FinanceReimbursements = () => {
                 {}
                 <div
                   style={{
+                    display: "flex",
+                    gap: "var(--space-3)",
                     marginTop: "var(--space-5)",
                     paddingTop: "var(--space-4)",
                     borderTop: "1px solid var(--border-light)",
@@ -286,6 +330,14 @@ const FinanceReimbursements = () => {
                   >
                     Process Reimbursement
                   </Button>
+
+                  <Button
+                    variant="danger"
+                    disabled={processingId === expense._id}
+                    onClick={() => openRejectModal(expense)}
+                  >
+                    Reject / Return
+                  </Button>
                 </div>
               </Card>
             );
@@ -293,7 +345,7 @@ const FinanceReimbursements = () => {
         </div>
       )}
 
-      {}
+      {/* Process Reimbursement Confirmation Modal */}
       <Modal
         isOpen={confirmModalOpen}
         onClose={() => setConfirmModalOpen(false)}
@@ -326,6 +378,66 @@ const FinanceReimbursements = () => {
             onClick={handleConfirmReimbursement}
           >
             Confirm & Pay
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Finance Rejection / Return Modal */}
+      <Modal
+        isOpen={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        title="Reject Reimbursement Claim"
+      >
+        <p style={{ marginBottom: "var(--space-4)", color: "var(--text-secondary)" }}>
+          Rejecting will return this claim and remove it from the payment queue. Please provide feedback explaining the decision to the employee and manager.
+        </p>
+
+        <div style={{ marginBottom: "var(--space-5)" }}>
+          <label
+            htmlFor="finance-rejection-comment"
+            style={{
+              display: "block",
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-medium)",
+              marginBottom: "var(--space-1)",
+              color: "var(--text)",
+            }}
+          >
+            Reason for Rejection <span style={{ color: "var(--danger)" }}>*</span>
+          </label>
+          <textarea
+            id="finance-rejection-comment"
+            rows={3}
+            style={{
+              width: "100%",
+              padding: "var(--space-2)",
+              borderRadius: "var(--radius-md)",
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--background)",
+              color: "var(--text)",
+              fontFamily: "inherit",
+            }}
+            placeholder="e.g. Receipt image is unclear, tax calculation invalid, or duplicate billing detected..."
+            value={financeComment}
+            onChange={(e) => setFinanceComment(e.target.value)}
+            required
+          />
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)" }}>
+          <Button
+            variant="ghost"
+            onClick={() => setRejectModalOpen(false)}
+            disabled={processingId !== null}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            loading={processingId !== null}
+            onClick={handleConfirmReject}
+          >
+            Confirm Rejection
           </Button>
         </div>
       </Modal>
