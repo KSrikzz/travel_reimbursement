@@ -59,17 +59,23 @@ const ManagerTravelRequests = () => {
 
     const { requestId, status } = modalAction;
 
+    if (status === "REJECTED" && !comment.trim()) {
+      setError("Please provide a reason for rejecting the travel request.");
+      return;
+    }
+
     try {
       setProcessingId(requestId);
       setError("");
       setSuccessMsg("");
-      setModalOpen(false);
 
       await updateTravelRequestStatus(
         requestId,
         status,
-        comment
+        comment.trim()
       );
+
+      setModalOpen(false);
 
       setRequests((previousRequests) =>
         previousRequests.filter(

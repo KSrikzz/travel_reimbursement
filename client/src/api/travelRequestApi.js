@@ -13,3 +13,8 @@ export const createTravelRequest = async (travelRequestData) => {
 
   return response.data;
 };
+
+export const cancelTravelRequest = async (requestId) => {
+  const response = await api.delete(`/travel-requests/${requestId}`);
+  return response.data;
+};
