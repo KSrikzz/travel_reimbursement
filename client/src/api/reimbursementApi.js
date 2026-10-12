@@ -25,3 +25,17 @@ export const getMyReimbursements = async () => {
 
   return response.data;
 };
+
+export const financeRejectExpense = async (
+  expenseId,
+  financeComment
+) => {
+  const response = await api.patch(
+    `/expenses/${expenseId}/finance-reject`,
+    {
+      financeComment,
+    }
+  );
+
+  return response.data;
+};

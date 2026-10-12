@@ -21,7 +21,7 @@ router.patch(
 router.get(
     "/my",
     protect,
-    authorize("EMPLOYEE"),
+    authorize("EMPLOYEE", "MANAGER", "FINANCE"),
     getMyReimbursements
 );
 
