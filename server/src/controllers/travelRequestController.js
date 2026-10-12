@@ -120,6 +120,20 @@ const updateTravelRequestStatus = async (req, res) => {
             });
         }
 
+        if (travelRequest.employee.toString() === req.user.userId) {
+            return res.status(403).json({
+                success: false,
+                message: "You cannot review or approve your own travel request",
+            });
+        }
+
+        if (status === "REJECTED" && !managerComment) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide a reason for rejecting the travel request",
+            });
+        }
+
         travelRequest.status = status;
         travelRequest.managerComment = managerComment || "";
         travelRequest.reviewedBy = req.user.userId;
@@ -149,10 +163,14 @@ const getPendingTravelRequests = async (req, res) => {
             .populate("employee", "name email department")
             .sort({ createdAt: -1 });
 
+        const filtered = req.user.department
+            ? requests.filter((r) => r.employee && r.employee.department === req.user.department)
+            : requests;
+
         res.status(200).json({
             success: true,
-            count: requests.length,
-            travelRequests: requests,
+            count: filtered.length,
+            travelRequests: filtered,
         });
     } catch (error) {
         console.error("Get pending travel requests error:", error);
@@ -163,9 +181,49 @@ const getPendingTravelRequests = async (req, res) => {
         });
     }
 };
+
+const cancelTravelRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const travelRequest = await TravelRequest.findOne({
+            _id: id,
+            employee: req.user.userId,
+        });
+
+        if (!travelRequest) {
+            return res.status(404).json({
+                success: false,
+                message: "Travel request not found",
+            });
+        }
+
+        if (travelRequest.status !== "PENDING") {
+            return res.status(400).json({
+                success: false,
+                message: "Only pending travel requests can be cancelled",
+            });
+        }
+
+        await TravelRequest.findByIdAndDelete(id);
+
+        res.status(200).json({
+            success: true,
+            message: "Travel request cancelled successfully",
+        });
+    } catch (error) {
+        console.error("Cancel travel request error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
 module.exports = {
     createTravelRequest,
     getMyTravelRequests,
     getPendingTravelRequests,
     updateTravelRequestStatus,
+    cancelTravelRequest,
 };

@@ -3,6 +3,7 @@ import AppLayout from "../components/AppLayout";
 import {
   getMyTravelRequests,
   createTravelRequest,
+  cancelTravelRequest,
 } from "../api/travelRequestApi";
 import PageHeader from "../components/PageHeader";
 import Card from "../components/Card";
@@ -59,6 +60,25 @@ const TravelRequests = () => {
       ...previous,
       [name]: value,
     }));
+  };
+
+  const handleCancelRequest = async (requestId) => {
+    if (!window.confirm("Are you sure you want to cancel this pending travel request?")) {
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccess("");
+      await cancelTravelRequest(requestId);
+      setSuccess("Travel request cancelled successfully.");
+      await loadRequests();
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+        "Failed to cancel travel request"
+      );
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -140,10 +160,11 @@ const TravelRequests = () => {
       )}
 
       {}
-      <Card className="dashboard-section">
-        <h2 style={{ marginBottom: "var(--space-4)" }}>
-          Create Travel Request
-        </h2>
+      <Card className="form-card" style={{ marginBottom: "var(--space-8)" }}>
+        <h2 className="form-card__title">Create Travel Request</h2>
+        <p className="form-card__description">
+          Submit travel plans with dates and estimated budget for departmental manager approval.
+        </p>
 
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
@@ -261,6 +282,18 @@ const TravelRequests = () => {
                       Manager Comment
                     </div>
                     {request.managerComment}
+                  </div>
+                )}
+
+                {request.status === "PENDING" && (
+                  <div style={{ marginTop: "var(--space-4)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--border-light)" }}>
+                    <Button
+                      variant="ghost"
+                      style={{ color: "var(--danger)", padding: "0.25rem 0.75rem", fontSize: "var(--font-size-sm)" }}
+                      onClick={() => handleCancelRequest(request._id)}
+                    >
+                      Cancel Request
+                    </Button>
                   </div>
                 )}
               </Card>

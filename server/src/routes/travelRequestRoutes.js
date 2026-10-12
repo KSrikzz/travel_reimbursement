@@ -5,6 +5,7 @@ const {
     getMyTravelRequests,
     getPendingTravelRequests,
     updateTravelRequestStatus,
+    cancelTravelRequest,
 } = require("../controllers/travelRequestController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -12,19 +13,26 @@ const authorize = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-// Employee
+// Employees & Travelers
 router.post(
     "/",
     protect,
-    authorize("EMPLOYEE"),
+    authorize("EMPLOYEE", "MANAGER", "FINANCE"),
     createTravelRequest
 );
 
 router.get(
     "/my",
     protect,
-    authorize("EMPLOYEE"),
+    authorize("EMPLOYEE", "MANAGER", "FINANCE"),
     getMyTravelRequests
+);
+
+router.delete(
+    "/:id",
+    protect,
+    authorize("EMPLOYEE", "MANAGER", "FINANCE"),
+    cancelTravelRequest
 );
 
 // Manager
