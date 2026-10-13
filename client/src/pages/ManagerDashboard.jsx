@@ -84,10 +84,6 @@ const ManagerDashboard = () => {
           value={dashboard?.rejectedExpenses ?? 0}
           variant="danger"
         />
-      </div>
-
-      {}
-      <div className="dashboard-stats" style={{ marginTop: 0 }}>
         <StatCard
           label="Reimbursed Expenses"
           value={dashboard?.reimbursedExpenses ?? 0}

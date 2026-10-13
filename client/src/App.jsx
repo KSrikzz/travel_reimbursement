@@ -25,11 +25,14 @@ const App = () => {
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardRedirect />} />
 
-          <Route element={<RoleRoute allowedRoles={["EMPLOYEE"]} />}>
-            <Route path="/dashboard/employee" element={<EmployeeDashboard />} />
+          <Route element={<RoleRoute allowedRoles={["EMPLOYEE", "MANAGER", "FINANCE"]} />}>
             <Route path="/travel-requests" element={<TravelRequests />}/>
             <Route path="/expenses" element={<Expenses />}/>
             <Route path="/my-reimbursements" element={<MyReimbursements />}/>
+          </Route>
+
+          <Route element={<RoleRoute allowedRoles={["EMPLOYEE"]} />}>
+            <Route path="/dashboard/employee" element={<EmployeeDashboard />} />
           </Route>
 
           <Route element={<RoleRoute allowedRoles={["MANAGER"]} />}>
