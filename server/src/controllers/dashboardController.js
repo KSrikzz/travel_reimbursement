@@ -1,10 +1,15 @@
+const mongoose = require("mongoose");
 const TravelRequest = require("../models/TravelRequest");
 const Expense = require("../models/Expense");
 const Reimbursement = require("../models/Reimbursement");
+const User = require("../models/User");
 
 const getEmployeeDashboard = async (req, res) => {
     try {
         const employeeId = req.user.userId;
+        const empObjectId = mongoose.Types.ObjectId.isValid(employeeId)
+            ? new mongoose.Types.ObjectId(employeeId)
+            : employeeId;
 
         const [
             totalTravelRequests,
@@ -36,7 +41,7 @@ const getEmployeeDashboard = async (req, res) => {
             Reimbursement.aggregate([
                 {
                     $match: {
-                        employee: employeeId,
+                        employee: empObjectId,
                         status: "COMPLETED",
                     },
                 },
@@ -90,8 +95,23 @@ const getEmployeeDashboard = async (req, res) => {
         });
     }
 };
+
 const getManagerDashboard = async (req, res) => {
     try {
+        let filter = (status) => ({ status });
+
+        if (req.user.department) {
+            const deptUsers = await User.find({
+                department: req.user.department,
+            }).select("_id");
+            const deptUserIds = deptUsers.map((u) => u._id);
+
+            filter = (status) => ({
+                status,
+                employee: { $in: deptUserIds },
+            });
+        }
+
         const [
             pendingTravelRequests,
             pendingExpenses,
@@ -99,25 +119,11 @@ const getManagerDashboard = async (req, res) => {
             rejectedExpenses,
             reimbursedExpenses,
         ] = await Promise.all([
-            TravelRequest.countDocuments({
-                status: "PENDING",
-            }),
-
-            Expense.countDocuments({
-                status: "PENDING",
-            }),
-
-            Expense.countDocuments({
-                status: "APPROVED",
-            }),
-
-            Expense.countDocuments({
-                status: "REJECTED",
-            }),
-
-            Expense.countDocuments({
-                status: "REIMBURSED",
-            }),
+            TravelRequest.countDocuments(filter("PENDING")),
+            Expense.countDocuments(filter("PENDING")),
+            Expense.countDocuments(filter("APPROVED")),
+            Expense.countDocuments(filter("REJECTED")),
+            Expense.countDocuments(filter("REIMBURSED")),
         ]);
 
         return res.status(200).json({

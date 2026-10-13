@@ -22,6 +22,7 @@ const ManagerExpenses = () => {
 
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
+  const [comment, setComment] = useState("");
 
   const loadExpenses = async () => {
     try {
@@ -47,6 +48,7 @@ const ManagerExpenses = () => {
 
   const openConfirmation = (expenseId, status) => {
     setPendingAction({ expenseId, status });
+    setComment("");
     setConfirmModalOpen(true);
   };
 
@@ -55,12 +57,17 @@ const ManagerExpenses = () => {
 
     const { expenseId, status } = pendingAction;
 
+    if (status === "REJECTED" && !comment.trim()) {
+      setError("Please provide a reason for rejecting this expense claim.");
+      return;
+    }
+
     try {
       setProcessingId(expenseId);
       setError("");
       setSuccess("");
 
-      await updateExpenseStatus(expenseId, status);
+      await updateExpenseStatus(expenseId, status, comment.trim());
 
       setExpenses((previousExpenses) =>
         previousExpenses.filter(
@@ -73,6 +80,7 @@ const ManagerExpenses = () => {
       );
       setConfirmModalOpen(false);
       setPendingAction(null);
+      setComment("");
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -315,6 +323,40 @@ const ManagerExpenses = () => {
           </strong>{" "}
           this expense claim? This decision will be recorded and forwarded to Finance if approved.
         </p>
+
+        {pendingAction?.status === "REJECTED" && (
+          <div style={{ marginBottom: "var(--space-4)" }}>
+            <label
+              htmlFor="rejection-comment"
+              style={{
+                display: "block",
+                fontSize: "var(--font-size-sm)",
+                fontWeight: "var(--font-weight-medium)",
+                marginBottom: "var(--space-1)",
+                color: "var(--text)",
+              }}
+            >
+              Rejection Reason <span style={{ color: "var(--danger)" }}>*</span>
+            </label>
+            <textarea
+              id="rejection-comment"
+              rows={3}
+              style={{
+                width: "100%",
+                padding: "var(--space-2)",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--background)",
+                color: "var(--text)",
+                fontFamily: "inherit",
+              }}
+              placeholder="e.g. Ineligible category, illegible receipt, or duplicate claim..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              required
+            />
+          </div>
+        )}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)" }}>
           <Button

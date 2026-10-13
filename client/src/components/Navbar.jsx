@@ -17,11 +17,15 @@ const getNavLinks = (role) => {
         { to: "/dashboard/manager", label: "Dashboard" },
         { to: "/manager/travel-requests", label: "Travel Review" },
         { to: "/manager/expenses", label: "Expense Review" },
+        { to: "/travel-requests", label: "My Travel" },
+        { to: "/expenses", label: "My Expenses" },
       ];
     case "FINANCE":
       return [
         { to: "/dashboard/finance", label: "Dashboard" },
         { to: "/finance/reimbursements", label: "Reimbursements" },
+        { to: "/travel-requests", label: "My Travel" },
+        { to: "/expenses", label: "My Expenses" },
       ];
     default:
       return [];

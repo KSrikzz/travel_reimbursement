@@ -7,12 +7,14 @@ export const getPendingExpenses = async () => {
 
 export const updateExpenseStatus = async (
   expenseId,
-  status
+  status,
+  managerComment
 ) => {
   const response = await api.patch(
     `/expenses/${expenseId}/status`,
     {
       status,
+      managerComment,
     }
   );
 
