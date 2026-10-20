@@ -9,6 +9,7 @@ const travelRequestRoutes = require("./routes/travelRequestRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const reimbursementRoutes = require("./routes/reimbursementRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const connectDB = require("./config/database");
 
 const app = express();
 
@@ -30,6 +31,20 @@ app.get("/api/health", (req, res) => {
         success: true,
         message: "Travel & Expense API is running",
     });
+});
+
+// Ensure database connection for serverless deployments (e.g., Vercel)
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        console.error("Database connection middleware error:", err.message);
+        return res.status(500).json({
+            success: false,
+            message: "Database connection failed",
+        });
+    }
 });
 
 app.use("/api/auth", authRoutes);
