@@ -151,11 +151,18 @@ const createExpense = async (req, res) => {
         let ocrExtractedAmount;
 
         if (req.file) {
-            const uploadResult = await uploadToCloudinary(
-                req.file.buffer
-            );
-
-            receiptUrl = uploadResult.secure_url;
+            try {
+                const uploadResult = await uploadToCloudinary(
+                    req.file.buffer
+                );
+                receiptUrl = uploadResult.secure_url;
+            } catch (uploadError) {
+                console.error("Cloudinary upload failed:", uploadError.message);
+                return res.status(500).json({
+                    success: false,
+                    message: "Receipt image upload failed. Please verify Cloudinary environment variables.",
+                });
+            }
 
             try {
                 ocrText = await extractTextFromImage(
@@ -164,7 +171,7 @@ const createExpense = async (req, res) => {
 
                 ocrExtractedAmount = extractTotalAmount(ocrText);
             } catch (ocrError) {
-                console.error("OCR extraction warning:", ocrError.message);
+                console.warn("OCR extraction skipped/failed:", ocrError.message);
                 ocrText = null;
                 ocrExtractedAmount = null;
             }
